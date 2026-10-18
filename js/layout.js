@@ -7,19 +7,19 @@
 // Menú del diseño (6 opciones). "p" = páginas que pertenecen a cada opción.
 const NAV = [
   { k: "inicio",     t: "Inicio",                   i: "i-home",  h: "dashboard.html",           p: ["dashboard.html"] },
-  { k: "monitoreo",  t: "Monitoreo",                i: "i-chart", h: "pages/monitoreo.html",     p: ["monitoreo.html", "telemetria.html"] },
+  { k: "monitoreo",  t: "Monitoreo",                i: "i-chart", h: "pages/monitoreo.html",     p: ["monitoreo.html"] },
   { k: "historial",  t: "Historial de datos",       i: "i-doc",   h: "pages/historial.html",     p: ["historial.html", "alertas.html"] },
-  { k: "prediccion", t: "Predicción de fertilidad", i: "i-brain", h: "pages/prediccion.html",    p: ["prediccion.html", "vision.html", "camara.html", "fusion.html", "reportes.html"] },
+  { k: "prediccion", t: "Predicción de fertilidad", i: "i-brain", h: "pages/prediccion.html",    p: ["prediccion.html", "vision.html", "camara.html"] },
   { k: "chat",       t: "Chat con IA",              i: "i-chat",  h: "pages/chat.html",          p: ["chat.html"] },
-  { k: "config",     t: "Configuración",            i: "i-gear",  h: "pages/configuracion.html", p: ["configuracion.html", "iot.html"] }
+  { k: "config",     t: "Configuración",            i: "i-gear",  h: "pages/configuracion.html", p: ["configuracion.html"] }
 ];
 // Pestañas internas de las opciones que agrupan varias páginas.
 const SUBNAV = {
-  monitoreo:  [["Tiempo real", "monitoreo.html"], ["Telemetría InfluxDB", "telemetria.html"]],
+  // Ocultas (InfluxDB no disponible en Railway): Telemetría InfluxDB, Análisis integrado, Reportes PDF, Control IoT
+  monitoreo:  [["Tiempo real", "monitoreo.html"]],
   historial:  [["Historial", "historial.html"], ["Alertas", "alertas.html"]],
-  prediccion: [["Clasificador IA", "prediccion.html"], ["Analizar imagen", "vision.html"], ["Cámara en vivo", "camara.html"],
-               ["Análisis integrado", "fusion.html"], ["Reportes PDF", "reportes.html"]],
-  config:     [["General", "configuracion.html"], ["Control IoT", "iot.html"]]
+  prediccion: [["Clasificador IA", "prediccion.html"], ["Analizar imagen", "vision.html"], ["Cámara en vivo", "camara.html"]],
+  config:     [["General", "configuracion.html"]]
 };
 const ATAJOS = [
   [/inicio|home|panel/, "dashboard.html"], [/temp|humedad|ph\b|tiempo real|monitor/, "pages/monitoreo.html"],
