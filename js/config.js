@@ -2,8 +2,8 @@
 const VERSION_PAGINA = "10.2";
 // Dirección de la API:
 //  - abriendo la página en este computador (localhost / archivo local) -> backend local
-//  - publicada (Railway u otro hosting) -> API desplegada (Render). Confirmen que esta URL sea la vigente.
-const API_PRODUCCION = "https://agro-ia-55iq.onrender.com";
+//  - publicada (Railway u otro hosting) -> API desplegada.
+const API_PRODUCCION = "https://agroiabackend.up.railway.app";
 const ES_LOCAL = ["localhost", "127.0.0.1", ""].includes(location.hostname);
 const API_BASE_URL = ES_LOCAL ? "http://localhost:8000" : API_PRODUCCION;
 
@@ -50,4 +50,3 @@ const CHAT_ENDPOINT = API_BASE_URL + "/chat";
 //   POST { temperatura, humedad_aire, humedad_suelo, ph }
 //   -> { clase: "Alta fertilidad", confianza: 0.87, recomendaciones: ["...", "..."] }
 const CLASIFICADOR = { url: "" };
-
