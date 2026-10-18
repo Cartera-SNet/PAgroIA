@@ -3,6 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🌱</text></svg>">
 <title>AgroIA — Iniciar sesión</title>
 <link rel="stylesheet" href="css/shell.css">
 <link rel="stylesheet" href="css/login.css">
@@ -33,7 +34,7 @@
     <button class="btn-google" id="google" type="button"><span class="g-letra">G</span>Continuar con Google</button>
     <div id="aviso" class="aviso" hidden></div>
     <p class="login-solo">Solo personal autorizado</p>
-    <a class="login-libre" id="libre" href="dashboard.html" hidden>Ver el tablero sin iniciar sesión →</a>
+    <a class="login-libre" id="libre" href="dashboard.html">Ver el tablero sin iniciar sesión →</a>
   </section>
 </div>
 
@@ -70,5 +71,14 @@
   };
   $("entrar").insertAdjacentHTML("beforeend", ico("i-arrow"));
 </script>
+
+<script>
+document.addEventListener("DOMContentLoaded", function() {
+  if (typeof SESION_OBLIGATORIA !== "undefined" && !SESION_OBLIGATORIA) {
+    window.location.replace("dashboard.html");
+  }
+});
+</script>
+
 </body>
 </html>
