@@ -50,4 +50,3 @@ const CHAT_ENDPOINT = API_BASE_URL + "/chat";
 //   POST { temperatura, humedad_aire, humedad_suelo, ph }
 //   -> { clase: "Alta fertilidad", confianza: 0.87, recomendaciones: ["...", "..."] }
 const CLASIFICADOR = { url: "" };
-
