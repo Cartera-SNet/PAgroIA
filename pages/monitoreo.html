@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Monitoreo · AgroIA</title>
+<link rel="stylesheet" href="../css/shell.css">
+<link rel="stylesheet" href="../css/app.css">
+</head>
+<body>
+<aside id="sidebar"></aside>
+<main class="apilado">
+  <h1 class="pag-titulo">Monitoreo en tiempo real</h1>
+  <section class="kpis kpis-simple" id="kpis"></section>
+  <section class="panel">
+    <div class="panel-cab"><h3>Gráficas en tiempo real</h3><a class="btn-s" id="ver-ts" target="_blank" rel="noopener">Abrir canal en ThingSpeak </a></div>
+    <div class="graficas-rt" id="graficas"></div>
+    <p class="nota-pie" id="nota-ts">Gráficos oficiales de ThingSpeak. Se actualizan solos cada 15 segundos.</p>
+  </section>
+</main>
+<script src="../js/config.js"></script>
+<script src="../js/api.js"></script>
+<script src="../js/auth.js"></script>
+<script src="../js/iconos.js"></script>
+<script src="../js/ts.js"></script>
+<script src="../js/charts.js"></script>
+<script src="../js/ui.js"></script>
+<script src="../js/layout.js"></script>
+<script src="../js/monitoreo.js"></script>
+</body>
+</html>

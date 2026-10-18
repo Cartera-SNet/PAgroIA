@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>AgroIA — Inicio</title>
+<link rel="stylesheet" href="css/shell.css">
+<link rel="stylesheet" href="css/app.css">
+</head>
+<body>
+<aside id="sidebar"></aside>
+<main class="apilado">
+  <section class="banner">
+    <div class="banner-logo" id="banner-logo"></div>
+    <div class="banner-txt">
+      <h1>Agro<b>IA</b></h1>
+      <h2>Diagnóstico de fertilidad del suelo</h2>
+      <p>Monitoreo y análisis inteligente del suelo para una agricultura más eficiente.</p>
+    </div>
+  </section>
+
+  <section class="kpis" id="kpis"></section>
+
+  <section class="graficas">
+    <article class="gcard" id="g-temp"><div class="gcard-cab"><h3>Temperatura del aire (°C)</h3><a class="gcard-ext" target="_blank" rel="noopener" title="Abrir en ThingSpeak" data-ext="temp"></a></div><div class="gcard-cuerpo" data-iframe="temp"></div></article>
+    <article class="gcard" id="g-suelo"><div class="gcard-cab"><h3>Humedad del suelo (%)</h3><a class="gcard-ext" target="_blank" rel="noopener" title="Abrir en ThingSpeak" data-ext="humSuelo"></a></div>
+      <div class="donut-cuerpo" id="donut-suelo"></div><div class="nivel" id="nivel-suelo"></div></article>
+    <article class="gcard" id="g-humaire"><div class="gcard-cab"><h3>Humedad del aire (%)</h3><a class="gcard-ext" target="_blank" rel="noopener" title="Abrir en ThingSpeak" data-ext="humAire"></a></div><div class="gcard-cuerpo" data-iframe="humAire"></div></article>
+    <article class="gcard" id="g-ph"><div class="gcard-cab"><h3>pH del suelo</h3><a class="gcard-ext" target="_blank" rel="noopener" title="Abrir en ThingSpeak" data-ext="ph"></a></div><div class="gcard-cuerpo" data-iframe="ph"></div></article>
+  </section>
+
+  <section class="fila-ia">
+    <article class="ia-card">
+      <div class="ia-ico" id="ia-ico"></div>
+      <div class="ia-txt">
+        <h3>Clasificación de fertilidad del suelo (IA)</h3>
+        <p>Analiza los datos del suelo y obtén una predicción de su fertilidad.</p>
+        <a class="btn-p" href="pages/prediccion.html" id="ver-analisis">Ver análisis </a>
+      </div>
+      <img class="ia-planta" src="assets/images/planta-ia.svg" alt="">
+    </article>
+    <article class="chat-mini">
+      <div class="chat-cab" id="chat-cab"><div><h3>Chat con AgroIA</h3><p>Consulta tus datos, recibe recomendaciones y controla el ESP32.</p></div></div>
+      <div class="msg-log" id="chat-log" aria-live="polite"></div>
+      <div class="chat-form"><input class="inp" id="chat-input" placeholder="Escribe un mensaje..." autocomplete="off"><button class="btn-send" id="chat-enviar" aria-label="Enviar"></button></div>
+    </article>
+  </section>
+</main>
+
+<script src="js/config.js"></script>
+<script src="js/api.js"></script>
+<script src="js/auth.js"></script>
+<script src="js/iconos.js"></script>
+<script src="js/ts.js"></script>
+<script src="js/charts.js"></script>
+<script src="js/ui.js"></script>
+<script src="js/chat-core.js"></script>
+<script src="js/layout.js"></script>
+<script src="js/dashboard.js"></script>
+</body>
+</html>

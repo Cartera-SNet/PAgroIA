@@ -1,0 +1,13 @@
+<!DOCTYPE html><html lang="es"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Control IoT · AGROIA</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css"><link rel="stylesheet" href="../css/shell.css"><link rel="stylesheet" href="../css/paginas.css"></head><body >
+<aside id="sidebar"></aside><main><h2>Control IoT</h2><div id="aviso" class="aviso" hidden></div>
+<div class="row"><span class="st" id="esp">ESP32</span></div>
+<div class="card"><h3 style="margin-top:0">Sensores</h3><div class="row" id="sensores"></div></div>
+<div class="card" id="config"><h3 style="margin-top:0">Intervalo de envío</h3>
+<div class="row"><select id="intervalo"><option value="5">5 segundos</option><option value="10">10 segundos</option><option value="30">30 segundos</option></select><button class="btn" id="guardar">Guardar configuración</button></div>
+<details><summary>Respuesta actual de /iot/configuracion</summary><pre id="raw">--</pre></details></div>
+<div class="card"><h3 style="margin-top:0">Teclado 4×4</h3><div class="aviso info">CONTROL MQTT — ENDPOINT PENDIENTE</div>
+<div class="row"><input type="text" id="codigo" readonly placeholder="Comando"><button class="btn sec" id="borrar">Borrar</button><button class="btn" disabled>Enviar comando</button></div>
+<div class="keypad" id="teclas"></div></div>
+</main>
+<script src="../js/config.js"></script><script src="../js/api.js"></script><script src="../js/auth.js"></script><script src="../js/iconos.js"></script><script src="../js/ts.js"></script><script src="../js/layout.js"></script><script src="../js/iot.js"></script></body></html>

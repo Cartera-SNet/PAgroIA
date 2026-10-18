@@ -1,0 +1,3 @@
+# Sin dependencias externas: serve.py usa solo la libreria estandar de Python.
+# Este archivo existe unicamente para que Railway reconozca el proyecto como Python
+# e instale el interprete (sin el, falla con "python3: command not found").

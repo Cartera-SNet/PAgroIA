@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>AgroIA — Iniciar sesión</title>
+<link rel="stylesheet" href="css/shell.css">
+<link rel="stylesheet" href="css/login.css">
+</head>
+<body class="login-body">
+<div class="login-wrap">
+  <section class="login-izq">
+    <div class="login-marca" id="marca"></div>
+    <p class="login-lema">Tecnología que cultiva<br>un mejor mañana</p>
+  </section>
+
+  <section class="login-card">
+    <h1>Iniciar sesión</h1>
+    <p class="sub">Accede a tu panel de control</p>
+    <form id="form" autocomplete="on">
+      <label class="t" for="u">Usuario</label>
+      <div class="in-ico" data-ico="i-user"><input type="text" id="u" placeholder="Ingresa tu usuario" autocomplete="username" required></div>
+      <label class="t" for="c">Contraseña</label>
+      <div class="in-ico" data-ico="i-lock"><input type="password" id="c" placeholder="Ingresa tu contraseña" autocomplete="current-password" required>
+        <button type="button" class="ver-clave" id="ver" aria-label="Mostrar contraseña"></button></div>
+      <div class="login-opc">
+        <label class="chk"><input type="checkbox" id="rec" checked> Recordarme</label>
+        <a href="#" id="olvide">¿Olvidaste tu contraseña?</a>
+      </div>
+      <button class="btn-entrar" id="entrar" type="submit"><span>Iniciar sesión</span></button>
+    </form>
+    <div class="login-o">o</div>
+    <button class="btn-google" id="google" type="button"><span class="g-letra">G</span>Continuar con Google</button>
+    <div id="aviso" class="aviso" hidden></div>
+    <p class="login-solo">Solo personal autorizado</p>
+    <a class="login-libre" id="libre" href="dashboard.html" hidden>Ver el tablero sin iniciar sesión →</a>
+  </section>
+</div>
+
+<script src="js/config.js"></script>
+<script src="js/api.js"></script>
+<script src="js/auth.js"></script>
+<script src="js/iconos.js"></script>
+<script>
+  inyectarIconos();
+  $("marca").innerHTML = ico("logo-hoja") + '<span>Agro<b>IA</b></span>';
+  document.querySelectorAll("[data-ico]").forEach(d => d.insertAdjacentHTML("afterbegin", ico(d.dataset.ico)));
+  $("ver").innerHTML = ico("i-eye");
+
+  // Al volver del login con Google, el backend envía ?token=JWT
+  const t = new URLSearchParams(location.search).get("token");
+  if (t) { guardarSesion(t); history.replaceState(null, "", "index.html"); }
+  if (obtenerToken()) location.replace("dashboard.html");
+  if (!SESION_OBLIGATORIA) $("libre").hidden = false;
+
+  $("ver").onclick = () => {
+    const c = $("c"), ver = c.type === "password";
+    c.type = ver ? "text" : "password"; $("ver").innerHTML = ico(ver ? "i-eye-off" : "i-eye");
+  };
+  $("olvide").onclick = e => { e.preventDefault(); const a = $("aviso"); a.className = "aviso info"; a.textContent = "Para recuperar tu contraseña comunícate con el administrador del sistema."; a.hidden = false; };
+  $("google").onclick = loginGoogle;
+  $("form").onsubmit = async e => {
+    e.preventDefault();
+    const b = $("entrar"), tx = b.querySelector("span"); b.disabled = true; tx.textContent = "Entrando...";
+    try { await loginTradicional($("u").value, $("c").value, $("rec").checked); location.href = "dashboard.html"; }
+    catch (err) {
+      const a = $("aviso"); a.className = "aviso"; a.textContent = "No fue posible iniciar sesión. Revisa tus datos y que el servidor esté activo."; a.hidden = false;
+      console.error(err); b.disabled = false; tx.textContent = "Iniciar sesión";
+    }
+  };
+  $("entrar").insertAdjacentHTML("beforeend", ico("i-arrow"));
+</script>
+</body>
+</html>

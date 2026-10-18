@@ -1,0 +1,28 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1400 190" preserveAspectRatio="xMaxYMid slice">
+  <defs>
+    <linearGradient id="fondo" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#062a1d"/><stop offset=".55" stop-color="#0b3f2a"/><stop offset="1" stop-color="#3f6b2c"/>
+    </linearGradient>
+    <linearGradient id="suelo" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#5a3d26"/><stop offset="1" stop-color="#2b1b10"/></linearGradient>
+    <linearGradient id="hoja" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#9be15d"/><stop offset="1" stop-color="#3c9a2e"/></linearGradient>
+    <radialGradient id="luz" cx=".8" cy=".25" r=".6"><stop offset="0" stop-color="#d7f0a2" stop-opacity=".55"/><stop offset="1" stop-color="#d7f0a2" stop-opacity="0"/></radialGradient>
+  </defs>
+  <rect width="1400" height="190" fill="url(#fondo)"/>
+  <rect width="1400" height="190" fill="url(#luz)"/>
+  <g fill="#cfe9a0" opacity=".14"><circle cx="760" cy="44" r="26"/><circle cx="900" cy="86" r="16"/><circle cx="1010" cy="30" r="34"/><circle cx="1180" cy="62" r="20"/></g>
+  <path d="M0 160c200-14 420-18 700-6s520 4 700-8v44H0z" fill="url(#suelo)"/>
+  <path d="M0 170c260-10 520-8 780 0s430 2 620-6v26H0z" fill="#22140b" opacity=".6"/>
+  <g transform="translate(1160 168)">
+    <path d="M0 0C-2-40 4-80 14-118" stroke="#4e9a35" stroke-width="5" fill="none" stroke-linecap="round"/>
+    <path d="M12-96C40-132 92-140 128-116 98-82 50-72 12-96z" fill="url(#hoja)"/>
+    <path d="M12-96C48-112 88-122 128-116" stroke="#2f7a28" stroke-width="2" fill="none"/>
+    <path d="M10-70C-14-100-62-108-96-86-70-54-24-46 10-70z" fill="url(#hoja)"/>
+    <path d="M10-70C-24-84-60-92-96-86" stroke="#2f7a28" stroke-width="2" fill="none"/>
+    <path d="M14-118C26-146 52-160 82-160 78-130 52-114 14-118z" fill="#7fcf4a"/>
+  </g>
+  <g transform="translate(1290 172) scale(.7)">
+    <path d="M0 0C-1-30 3-60 10-90" stroke="#4e9a35" stroke-width="5" fill="none" stroke-linecap="round"/>
+    <path d="M9-72C34-102 76-108 106-90 82-62 42-54 9-72z" fill="url(#hoja)"/>
+    <path d="M8-52C-12-78-52-84-80-66-60-40-22-34 8-52z" fill="url(#hoja)"/>
+  </g>
+</svg>

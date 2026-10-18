@@ -1,0 +1,65 @@
+/* AgroIA — Páginas internas (telemetría, visión, cámara, IoT, alertas...)
+   Usa la estructura de shell.css; aquí solo el contenido de cada página. */
+
+.content.pagina{display:block;padding:22px 24px 34px 22px}
+
+h2{margin:0 0 16px;font-size:20px;font-weight:700;color:var(--tinta);display:flex;align-items:center;gap:10px}
+h2 i{color:var(--verde);font-size:18px}
+h3{font-size:15px;font-weight:600}
+
+.card{background:var(--card);border:1px solid var(--borde);border-radius:10px;padding:16px 18px;margin-bottom:16px;box-shadow:var(--sombra)}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:12px;margin-bottom:16px}
+.grid .card{margin:0}
+.kpi{border-left:4px solid var(--borde)}
+.kpi.ok{border-left-color:var(--verde)}.kpi.warn{border-left-color:var(--warn)}.kpi.bad{border-left-color:var(--bad)}
+.kpi span{font-size:12.5px;color:var(--mut)}
+.kpi b{display:block;font-size:24px;margin-top:4px;color:var(--tinta)}
+
+.row{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin-bottom:12px}
+.st{display:inline-flex;align-items:center;gap:7px;padding:5px 12px;border-radius:999px;background:#fff;border:1px solid var(--borde);font-size:12.5px}
+.st::before{content:"";width:9px;height:9px;border-radius:50%;background:#a8b4be}
+.st.ok::before{background:var(--verde)}.st.bad::before{background:var(--bad)}
+
+.aviso{background:#fdecea;color:#8a2e20;border:1px solid #f3c6c0;padding:10px 14px;border-radius:8px;margin-bottom:14px;font-size:13px}
+.aviso.info{background:#fff7e0;color:#7a5a10;border-color:#f0dca0}
+
+.btn,button.btn{display:inline-block;background:var(--verde);color:#fff;border:0;border-radius:8px;padding:9px 16px;font:inherit;font-size:13.5px;font-weight:500;cursor:pointer;text-decoration:none}
+.btn:hover{background:#12873d}
+.btn:disabled{opacity:.5;cursor:not-allowed}
+.btn.sec{background:#e8efe9;color:var(--tinta)}
+.btn.sec:hover{background:#dbe6dd}
+
+select,input[type=text],input[type=password],input[type=file]{padding:8px 10px;border:1px solid #d8e2dc;border-radius:8px;font:inherit;font-size:13px;background:#fff;color:var(--tinta)}
+select:focus,input:focus{outline:0;border-color:var(--verde)}
+
+table{width:100%;border-collapse:collapse;font-size:13px}
+th,td{padding:8px 10px;border-bottom:1px solid #edf2ef;text-align:left}
+th{color:var(--mut);font-weight:600}
+.tabla{overflow:auto;max-height:420px}
+
+.chart{height:280px}
+.stage{position:relative;background:#000;border-radius:8px;overflow:hidden}
+.stage video{display:block;width:100%}
+.stage canvas{position:absolute;inset:0;width:100%;height:100%}
+#lienzo{max-width:100%;border-radius:8px;background:#000}
+.det{padding:8px 0;border-bottom:1px solid #edf2ef;font-size:13.5px}
+.ok-msg{color:var(--verde);font-weight:600}
+
+.keypad{display:grid;grid-template-columns:repeat(4,64px);gap:8px}
+.keypad button{height:56px;font-size:17px;border:1px solid #d8e2dc;border-radius:8px;background:#fff;cursor:pointer}
+.keypad button:hover{background:#e8efe9}
+
+pre{background:#f0f4f1;padding:10px;border-radius:8px;overflow:auto;font-size:12px}
+.two{display:grid;grid-template-columns:2fr 1fr;gap:16px}
+
+/* Alertas del backend (tarjetas) */
+.alerta-item{display:flex;gap:12px;align-items:flex-start;padding:10px 0;border-bottom:1px solid #edf2ef;font-size:13.5px}
+.alerta-item:last-child{border-bottom:0}
+.alerta-nivel{flex:none;font-size:11px;font-weight:600;padding:3px 10px;border-radius:12px;background:#fdf0d8;color:#a35a00}
+.alerta-nivel.alto,.alerta-nivel.critico,.alerta-nivel.alta{background:#fde4e1;color:#b3261e}
+.alerta-nivel.bajo,.alerta-nivel.baja{background:#e8f6ec;color:#1f9d55}
+.alerta-cuerpo small{display:block;color:var(--mut);margin-top:2px;font-size:11.5px}
+.vacio{color:var(--mut);font-size:13px}
+
+@media (max-width:900px){.two{grid-template-columns:1fr}}
+@media (max-width:760px){.content.pagina{padding:14px 12px 88px}h2{font-size:18px}.keypad{grid-template-columns:repeat(4,1fr)}}

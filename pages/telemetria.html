@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>Telemetría · AGROIA</title>
+
+    <!-- Font Awesome -->
+    <link
+        rel="stylesheet"
+        href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css"
+    >
+
+    <!-- Estilos del sistema -->
+    <link rel="stylesheet" href="../css/shell.css"><link rel="stylesheet" href="../css/paginas.css">
+</head>
+
+<body>
+
+    <!-- =====================================================
+         SIDEBAR
+    ====================================================== -->
+    <aside id="sidebar"></aside>
+
+
+    <!-- =====================================================
+         CONTENIDO PRINCIPAL
+    ====================================================== -->
+    <main>
+
+        <!-- TÍTULO -->
+        <h2>
+            <i class="fa-solid fa-chart-line"></i>
+            Telemetría
+        </h2>
+
+
+        <!-- MENSAJES DEL SISTEMA -->
+        <div
+            id="aviso"
+            class="aviso"
+            hidden
+        ></div>
+
+
+        <!-- =================================================
+             FILTROS
+        ================================================== -->
+        <div class="row">
+
+            <!-- Ventana de tiempo -->
+            <select id="ventana">
+                <option value="5">
+                    Últimos 5 minutos
+                </option>
+
+                <option value="15">
+                    Últimos 15 minutos
+                </option>
+
+                <option value="60">
+                    Última hora
+                </option>
+            </select>
+
+
+            <!-- Variable -->
+            <select id="variable"></select>
+
+
+            <!-- Estado de carga -->
+            <span id="carga">
+                Cargando telemetría...
+            </span>
+
+        </div>
+
+
+        <!-- =================================================
+             GRÁFICA
+        ================================================== -->
+        <div class="card chart">
+
+            <canvas id="grafica"></canvas>
+
+        </div>
+
+
+        <!-- =================================================
+             TABLA DE MEDICIONES
+        ================================================== -->
+        <div class="card tabla">
+
+            <table>
+
+                <thead>
+
+                    <tr>
+
+                        <th>
+                            Fecha
+                        </th>
+
+                        <th>
+                            Hora
+                        </th>
+
+                        <th>
+                            Humedad suelo
+                        </th>
+
+                        <th>
+                            Temperatura
+                        </th>
+
+                        <th>
+                            Humedad aire
+                        </th>
+
+                        <th>
+                            pH
+                        </th>
+
+                        <th>
+                            TDS
+                        </th>
+
+                    </tr>
+
+                </thead>
+
+
+                <tbody id="filas">
+
+                    <!-- Las mediciones se cargan mediante JavaScript -->
+
+                </tbody>
+
+            </table>
+
+        </div>
+
+    </main>
+
+
+    <!-- =====================================================
+         LIBRERÍAS
+    ====================================================== -->
+
+    <!-- Chart.js -->
+    <script
+        src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js">
+    </script>
+
+
+    <!-- =====================================================
+         JAVASCRIPT DEL SISTEMA
+    ====================================================== -->
+
+    <!-- Configuración API -->
+    <script src="../js/config.js"></script>
+
+    <!-- Funciones API -->
+    <script src="../js/api.js"></script>
+
+    <!-- Autenticación -->
+    <script src="../js/auth.js"></script>
+
+    <!-- Layout / Sidebar -->
+    <script src="../js/iconos.js"></script><script src="../js/ts.js"></script><script src="../js/layout.js"></script>
+
+    <!-- Telemetría -->
+    <script src="../js/telemetria.js"></script>
+
+</body>
+
+</html>

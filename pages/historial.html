@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Historial de datos · AgroIA</title>
+<link rel="stylesheet" href="../css/shell.css">
+<link rel="stylesheet" href="../css/app.css">
+</head>
+<body>
+<aside id="sidebar"></aside>
+<main class="apilado">
+  <section class="banner sub">
+    <div class="banner-ico" id="h-ico"></div>
+    <div class="banner-txt">
+      <h1>Historial de datos</h1>
+      <p>Consulta y analiza el historial de mediciones de los sensores del suelo y del ambiente. Filtra por fecha, parámetro y visualiza la información en gráficos y tablas.</p>
+    </div>
+    <div class="banner-badge"><span class="bb-ico" id="h-bb"></span><div><b>AgroIA</b><small>Datos reales desde ThingSpeak <i class="punto gris" id="h-punto"></i></small></div></div>
+  </section>
+
+  <section class="filtros">
+    <div class="filtro-grupo rango"><div class="fg-tit" id="t-rango">Rango de fechas</div>
+      <div class="rango-in"><input class="inp" type="date" id="f-desde" aria-label="Desde"><span>–</span><input class="inp" type="date" id="f-hasta" aria-label="Hasta"></div></div>
+    <div class="filtro-grupo sel"><div class="fg-tit" id="t-param">Parámetro</div>
+      <select class="inp" id="f-param">
+        <option value="todos">Todos los parámetros</option><option value="temp">Temperatura del aire</option>
+        <option value="humAire">Humedad del aire</option><option value="humSuelo">Humedad del suelo</option><option value="ph">pH del suelo</option>
+      </select></div>
+    <div class="filtro-grupo sel"><div class="fg-tit" id="t-int">Intervalo de tiempo</div>
+      <select class="inp" id="f-int">
+        <option value="0">Datos originales</option><option value="10">Cada 10 minutos</option><option value="30">Cada 30 minutos</option>
+        <option value="60" selected>Cada 1 hora</option><option value="240">Cada 4 horas</option><option value="720">Cada 12 horas</option><option value="1440">Cada día</option>
+      </select></div>
+    <div class="filtros-acc"><button class="btn-p" id="aplicar"></button><button class="btn-s" id="csv"></button></div>
+  </section>
+
+  <div class="hist-grid">
+    <div class="apilado">
+      <section class="panel panel-tabla">
+        <div class="tabla-reg-cab">
+          <div><h3>Historial de registros</h3><p class="sub" id="tabla-sub">Cargando...</p></div>
+          <label class="tabla-ctrl">Filas por página
+            <select class="inp inp-peq" id="f-filas"><option value="10" selected>10</option><option value="25">25</option><option value="50">50</option></select></label>
+        </div>
+        <div class="tabla-scroll"><table class="tabla-reg">
+          <thead><tr><th id="th-fecha">Fecha y hora</th><th id="th-temp"></th><th id="th-humAire"></th><th id="th-humSuelo"></th><th id="th-ph"></th><th></th></tr></thead>
+          <tbody id="cuerpo"></tbody></table></div>
+        <div class="tabla-pie"><div class="pag" id="pag"></div><span class="pag-info" id="pag-info"></span></div>
+      </section>
+      <section class="panel">
+        <div class="panel-cab"><h3>Evolución de variables</h3><div class="leyenda" id="leyenda"></div></div>
+        <div class="evo" id="evo"></div>
+      </section>
+    </div>
+    <div class="apilado">
+      <section class="kpis kpis-lado" id="kpis"></section>
+      <section class="panel">
+        <div class="fr-cab"><h3>Filtros rápidos</h3><button id="fr-reset" title="Restablecer filtros" aria-label="Restablecer filtros"></button></div>
+        <div class="fr-lista" id="fr-lista"></div>
+      </section>
+      <section class="panel sabias" id="sabias">
+        <h3>¿Sabías que?</h3>
+        <p>Los datos históricos te permiten identificar patrones y tomar mejores decisiones para el cuidado de tus cultivos.</p>
+      </section>
+    </div>
+  </div>
+</main>
+<script src="../js/config.js"></script>
+<script src="../js/api.js"></script>
+<script src="../js/auth.js"></script>
+<script src="../js/iconos.js"></script>
+<script src="../js/ts.js"></script>
+<script src="../js/charts.js"></script>
+<script src="../js/ui.js"></script>
+<script src="../js/layout.js"></script>
+<script src="../js/historial.js"></script>
+</body>
+</html>

@@ -1,0 +1,30 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1600 1000" preserveAspectRatio="xMidYMid slice">
+  <defs>
+    <radialGradient id="g" cx=".72" cy=".5" r=".95"><stop offset="0" stop-color="#2f6a2c"/><stop offset=".45" stop-color="#103f26"/><stop offset="1" stop-color="#062417"/></radialGradient>
+    <linearGradient id="suelo" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#54381f"/><stop offset="1" stop-color="#1e1209"/></linearGradient>
+    <linearGradient id="hoja" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#a9ea68"/><stop offset="1" stop-color="#3a9a2c"/></linearGradient>
+  </defs>
+  <rect width="1600" height="1000" fill="url(#g)"/>
+  <g fill="#bfe58a" opacity=".12"><circle cx="300" cy="180" r="70"/><circle cx="520" cy="320" r="38"/><circle cx="1100" cy="150" r="90"/><circle cx="1380" cy="320" r="46"/><circle cx="820" cy="90" r="30"/><circle cx="160" cy="520" r="52"/></g>
+  <path d="M0 820c260-40 560-52 860-26s520 16 740-22v228H0z" fill="url(#suelo)"/>
+  <path d="M0 880c300-30 640-30 960-6s460 4 640-14v140H0z" fill="#150c06" opacity=".55"/>
+  <g transform="translate(1180 840) scale(2.1)">
+    <path d="M0 0C-2-50 6-100 18-150" stroke="#4e9a35" stroke-width="6" fill="none" stroke-linecap="round"/>
+    <path d="M16-122C50-166 114-176 158-146 120-104 62-92 16-122z" fill="url(#hoja)"/>
+    <path d="M16-122C60-140 108-152 158-146" stroke="#2f7a28" stroke-width="2.5" fill="none"/>
+    <path d="M12-88C-18-124-76-134-118-108-86-68-30-58 12-88z" fill="url(#hoja)"/>
+    <path d="M12-88C-30-106-76-116-118-108" stroke="#2f7a28" stroke-width="2.5" fill="none"/>
+    <path d="M18-150C32-184 64-202 100-202 96-166 64-146 18-150z" fill="#86d24e"/>
+  </g>
+  <g transform="translate(1440 850) scale(1.2)">
+    <path d="M0 0C-1-40 4-80 12-116" stroke="#4e9a35" stroke-width="5" fill="none" stroke-linecap="round"/>
+    <path d="M10-94C40-130 92-138 128-114 98-80 50-70 10-94z" fill="url(#hoja)"/>
+    <path d="M8-68C-16-98-64-106-98-84-72-52-26-44 8-68z" fill="url(#hoja)"/>
+  </g>
+  <g transform="translate(240 560) rotate(-24) scale(2.2)" opacity=".5">
+    <path d="M0 0C20-60 90-96 170-86 150-16 80 22 0 0z" fill="#2c7a35"/>
+  </g>
+  <g transform="translate(120 1000) rotate(-60) scale(2.6)" opacity=".45">
+    <path d="M0 0C20-60 90-96 170-86 150-16 80 22 0 0z" fill="#245f2b"/>
+  </g>
+</svg>
