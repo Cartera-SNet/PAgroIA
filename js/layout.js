@@ -82,7 +82,7 @@ function montarLayout(op) {
 
   // ---- Barra inferior (móvil)
   const bn = [["inicio", "Inicio", "i-home", "dashboard.html"], ["monitoreo", "Monitoreo", "i-chart", "pages/monitoreo.html"],
-              ["historial", "Historial", "i-doc", "pages/historial.html"], ["chat", "Chat", "i-chat", "pages/chat.html"]];
+              ["prediccion", "Análisis", "i-brain", "pages/vision.html"], ["historial", "Historial", "i-doc", "pages/historial.html"]];
   const bottom = document.createElement("nav"); bottom.className = "bottomnav"; bottom.setAttribute("aria-label", "Navegación móvil");
   bottom.innerHTML = bn.map(([k, t, i, h]) => `<a href="${RAIZ}${h}" class="${k === grupo ? "activo" : ""}">${ico(i)}<span>${t}</span></a>`).join("") +
     `<a href="#" id="mas">${ico("i-dots")}<span>Más</span></a>`;
