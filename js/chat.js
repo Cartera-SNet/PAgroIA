@@ -1,4 +1,4 @@
-/* AgroIA — Página de chat (usa chat-core.js: servidor /chat y, si no existe, datos de ThingSpeak) */
+/* AgroIA - Página de chat (usa chat-core.js: servidor /chat y, si no existe, datos de ThingSpeak) */
 montarLayout({ nuevo: true });
 (function () {
   "use strict";

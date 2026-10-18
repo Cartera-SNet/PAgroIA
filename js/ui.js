@@ -1,5 +1,5 @@
 /* ==========================================================
-   AgroIA — Piezas de interfaz compartidas por las pantallas nuevas
+   AgroIA - Piezas de interfaz compartidas por las pantallas nuevas
    ========================================================== */
 function iconoMedida(m) {
   return '<div class="kpi-ico ' + m.clase + '">' + (m.icono ? ico(m.icono) : '<span class="ph-txt">pH</span>') + '</div>';

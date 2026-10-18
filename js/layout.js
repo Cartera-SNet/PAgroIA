@@ -1,5 +1,5 @@
 /* ==========================================================
-   AgroIA — Estructura común de las páginas
+   AgroIA - Estructura común de las páginas
    Cada página solo necesita:  <aside id="sidebar"></aside><main>…</main>
    y llamar a montarLayout({...}).  Las páginas del diseño nuevo pasan { nuevo: true }.
    ========================================================== */

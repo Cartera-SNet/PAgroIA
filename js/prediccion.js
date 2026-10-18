@@ -1,5 +1,5 @@
 /* ==========================================================
-   AgroIA — Predicción de fertilidad
+   AgroIA - Predicción de fertilidad
    - Si CLASIFICADOR.url (config.js) está definido, envía los datos al modelo (Punto 3, Edge Impulse).
    - Mientras no esté, hace una ESTIMACIÓN POR REGLAS con los rangos de RANGOS (config.js) y lo avisa en pantalla.
    ========================================================== */

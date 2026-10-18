@@ -1,4 +1,4 @@
-/* AgroIA — Pantalla de acceso (diseño: foto de fondo a la izquierda, tarjeta a la derecha) */
+/* AgroIA - Pantalla de acceso (diseño: foto de fondo a la izquierda, tarjeta a la derecha) */
 .login-body{min-height:100vh;color:#fff;
   background:url("../assets/images/login.jpg") center/cover no-repeat,url("../assets/images/login.svg") center/cover no-repeat,#062a1d}
 .login-wrap{min-height:100vh;display:grid;grid-template-columns:minmax(0,1fr) 410px;gap:70px;align-items:center;max-width:1240px;margin:0 auto;padding:30px 6vw}

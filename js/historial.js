@@ -1,5 +1,5 @@
 /* ==========================================================
-   AgroIA — Historial de datos (datos reales de ThingSpeak)
+   AgroIA - Historial de datos (datos reales de ThingSpeak)
    Rango de fechas + parámetro + intervalo (promedio), gráfico con doble eje, tabla paginada y CSV.
    ========================================================== */
 montarLayout({ nuevo: true, estadoPropio: true, buscador: "Buscar por fecha, parámetro o tipo de dato..." });

@@ -1,5 +1,5 @@
 /* ==========================================================
-   AgroIA — Chat con AgroIA (lo usan el Inicio y la página de Chat)
+   AgroIA - Chat con AgroIA (lo usan el Inicio y la página de Chat)
    1) Intenta el servidor:  POST {CHAT_ENDPOINT}  { texto }  ->  { respuesta }
    2) Si el servidor aún no tiene /chat (Punto 4) o no responde, contesta con los datos reales
       de ThingSpeak (temperatura, humedades, pH, estado). Lo avisa en la propia burbuja.

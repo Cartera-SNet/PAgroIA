@@ -1,5 +1,5 @@
 /* ==========================================================
-   AgroIA — Gráficos SVG propios (sin librerías externas)
+   AgroIA - Gráficos SVG propios (sin librerías externas)
    ========================================================== */
 const SVGNS = "http://www.w3.org/2000/svg";
 function svgEl(tag, attrs, texto) {

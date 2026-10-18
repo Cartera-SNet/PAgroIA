@@ -1,4 +1,4 @@
-/* AgroIA — Configuración: canal de ThingSpeak, notificaciones y preferencias (se guardan en este navegador) */
+/* AgroIA - Configuración: canal de ThingSpeak, notificaciones y preferencias (se guardan en este navegador) */
 montarLayout({ nuevo: true, estadoPropio: true });
 (function () {
   "use strict";

@@ -1,4 +1,4 @@
-/* AgroIA — Íconos (sprite SVG). Se inyecta una sola vez con inyectarIconos(). */
+/* AgroIA - Íconos (sprite SVG). Se inyecta una sola vez con inyectarIconos(). */
 const SPRITE = `<svg width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false">
   <defs>
     <linearGradient id="gHoja" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#6be585"/><stop offset="1" stop-color="#1fa34a"/></linearGradient>

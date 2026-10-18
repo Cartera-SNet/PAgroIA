@@ -1,5 +1,5 @@
 /* ==========================================================
-   AgroIA — ThingSpeak: configuración efectiva, lectura de datos y direcciones de gráficos.
+   AgroIA - ThingSpeak: configuración efectiva, lectura de datos y direcciones de gráficos.
    La configuración base está en js/config.js (objeto THINGSPEAK). Desde "Configuración"
    se puede cambiar el canal en este navegador sin tocar archivos (se guarda en localStorage).
    ========================================================== */

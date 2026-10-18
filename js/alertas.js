@@ -17,7 +17,7 @@ async function cargar() {
     lista.sort((x, y) => new Date(y.Alerta_FechaHora || 0) - new Date(x.Alerta_FechaHora || 0));
     $("remotas").innerHTML = lista.slice(0, 100).map(al => `<div class="alerta-item">
       <span class="alerta-nivel ${esc(String(al.Alerta_Nivel || "").toLowerCase())}">${esc(al.Alerta_Nivel || "—")}</span>
-      <div class="alerta-cuerpo"><b>${esc(al.Alerta_Tipo || "Alerta")}</b> — ${esc(al.Alerta_Mensaje || "")}
+      <div class="alerta-cuerpo"><b>${esc(al.Alerta_Tipo || "Alerta")}</b> - ${esc(al.Alerta_Mensaje || "")}
       <small>${esc(fmtHora(al.Alerta_FechaHora))} · ${esc(al.Alerta_Estado || "")} · muestra #${esc(al.Muestra_Id ?? "—")}</small></div></div>`).join("")
       || '<span class="vacio">Sin alertas registradas.</span>';
   } catch (e) { avisar("No fue posible consultar las alertas.", e); }

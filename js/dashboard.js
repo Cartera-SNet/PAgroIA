@@ -1,5 +1,5 @@
 /* ==========================================================
-   AgroIA — Inicio
+   AgroIA - Inicio
    - Tarjetas, anillo de humedad del suelo y estado del sistema: datos reales del canal de ThingSpeak.
    - Temperatura, humedad del aire y pH: gráficos oficiales de ThingSpeak (iframes).
    Configuración: js/config.js (THINGSPEAK) o la pantalla Configuración.

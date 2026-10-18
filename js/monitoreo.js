@@ -1,4 +1,4 @@
-/* AgroIA — Monitoreo en tiempo real: tarjetas + los 4 gráficos oficiales de ThingSpeak */
+/* AgroIA - Monitoreo en tiempo real: tarjetas + los 4 gráficos oficiales de ThingSpeak */
 montarLayout({ nuevo: true, estadoPropio: true });
 (function () {
   "use strict";
