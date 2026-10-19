@@ -90,7 +90,7 @@ Un **ESP32** con sensores mide **temperatura del aire, humedad del aire, humedad
 ## 5. Frontend (`PAgroIA`)
 
 - **Qué es:** página estática (HTML/CSS/JS, sin librerías) servida con `serve.py` en Railway (`Procfile`). Se publica con el contenido en la raíz del repo.
-- **`js/config.js`:** `API_PRODUCCION = https://agroiabackend.up.railway.app`, `SESION_OBLIGATORIA = false` (abre sin iniciar sesión), `THINGSPEAK = {channelId: "3540815", campos: {temp:1, humAire:2, humSuelo:3, ph:4}}`, `RANGOS`, `CLASIFICADOR.url = ""` (vacío: la predicción usa reglas hasta que el modelo del Punto 3 tenga URL).
+- **`js/config.js`:** `API_PRODUCCION = https://agroiabackend.up.railway.app`, `SESION_OBLIGATORIA = true` (el tablero requiere iniciar sesión), `THINGSPEAK = {channelId: "3540815", campos: {temp:1, humAire:2, humSuelo:3, ph:4}}`, `RANGOS`, `CLASIFICADOR.url = ""` (vacío: la predicción usa reglas hasta que el modelo del Punto 3 tenga URL).
 - **Pantallas:** Inicio (`dashboard.html`), Monitoreo, Historial (tabla, gráfico y CSV), Predicción de fertilidad, Chat con IA, Configuración, y las pestañas del backend: Analizar imagen (YOLO), Cámara en vivo, Alertas.
 - **Ocultas (no borradas):** Telemetría InfluxDB, Análisis integrado, Reportes PDF, Control IoT.
 - **Móvil:** barra inferior *Inicio · Monitoreo · Análisis (→ `pages/vision.html`) · Historial · Más*. La **cámara en vivo** abre la cámara trasera y tiene un botón **«Cambiar cámara»** (frontal/trasera).

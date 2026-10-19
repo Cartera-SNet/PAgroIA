@@ -34,7 +34,6 @@
     <button class="btn-google" id="google" type="button"><span class="g-letra">G</span>Continuar con Google</button>
     <div id="aviso" class="aviso" hidden></div>
     <p class="login-solo">Solo personal autorizado</p>
-    <a class="login-libre" id="libre" href="dashboard.html">Ver el tablero sin iniciar sesión →</a>
   </section>
 </div>
 
@@ -52,7 +51,6 @@
   const t = new URLSearchParams(location.search).get("token");
   if (t) { guardarSesion(t); history.replaceState(null, "", "index.html"); }
   if (obtenerToken()) location.replace("dashboard.html");
-  if (!SESION_OBLIGATORIA) $("libre").hidden = false;
 
   $("ver").onclick = () => {
     const c = $("c"), ver = c.type === "password";
@@ -70,14 +68,6 @@
     }
   };
   $("entrar").insertAdjacentHTML("beforeend", ico("i-arrow"));
-</script>
-
-<script>
-document.addEventListener("DOMContentLoaded", function() {
-  if (typeof SESION_OBLIGATORIA !== "undefined" && !SESION_OBLIGATORIA) {
-    window.location.replace("dashboard.html");
-  }
-});
 </script>
 
 </body>
