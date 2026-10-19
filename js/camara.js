@@ -3,11 +3,30 @@ const v = $("video"), c = $("canvas"), x = c.getContext("2d");
 const cx = document.createElement("canvas"), cxx = cx.getContext("2d");
 let ws, vuelo = false, pausa = false;
 v.onloadedmetadata = () => { c.width = v.videoWidth; c.height = v.videoHeight; };
-async function cam() {
-  if (v.srcObject) return;
-  try { v.srcObject = await navigator.mediaDevices.getUserMedia({ video: true, audio: false }); }
-  catch (e) { avisar("No fue posible acceder a la cámara.", e); }
+let facingMode = "environment"; // rear by default on mobile
+async function cam(force = false) {
+  if (v.srcObject && !force) return;
+  if (v.srcObject) {
+    v.srcObject.getTracks().forEach(t => t.stop());
+    v.srcObject = null;
+  }
+  try {
+    const constraints = {
+      video: { facingMode: facingMode },
+      audio: false
+    };
+    v.srcObject = await navigator.mediaDevices.getUserMedia(constraints);
+  } catch (e) {
+    // fallback if facingMode not supported
+    try { v.srcObject = await navigator.mediaDevices.getUserMedia({ video: true, audio: false }); }
+    catch (e2) { avisar("No fue posible acceder a la cámara.", e2); }
+  }
 }
+function cambiarCamara() {
+  facingMode = facingMode === "environment" ? "user" : "environment";
+  cam(true);
+}
+document.getElementById("cambiar-cam")?.addEventListener("click", cambiarCamara);
 function conectar() {
   ws = new WebSocket(`${WS_BASE_URL}/vision/stream`);
   ws.onopen = () => { setEstado("ws", true, "Stream conectado"); cam(); };
