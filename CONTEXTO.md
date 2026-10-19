@@ -2,7 +2,7 @@
 
 | | |
 |---|---|
-| **Versión del documento** | **v1.2** |
+| **Versión del documento** | **v1.0** |
 | **Última actualización** | 19 de octubre de 2026 |
 | **Proyecto** | AgroIA — Diagnóstico de fertilidad del suelo |
 | **Asignatura** | Inteligencia Artificial 26-2 · CUL · Docente: Bryan Josser Fernández Ebrath |
@@ -45,49 +45,21 @@ Un **ESP32** con sensores mide **temperatura del aire, humedad del aire, humedad
 |---|---|
 | API | https://agroiabackend.up.railway.app |
 | Documentación de la API (Swagger) | https://agroiabackend.up.railway.app/docs |
-| Página web | https://agroia-suelo.up.railway.app |
-| Tablero | https://agroia-suelo.up.railway.app/dashboard.html |
+| Página web | https://agroia-suelo.up.railway.app (tablero: `/dashboard.html`) |
 | Canal ThingSpeak (público) | https://thingspeak.mathworks.com/channels/3540815 |
 | Channel ID | `3540815` |
 
 **Render ya no se usa.** Toda la API está en Railway. Cualquier variable `API_URL` que aún apunte a `onrender.com` debe cambiarse (el bot y el puente la corrigen solos al arrancar, pero conviene dejarla bien).
 
-### Trabajar desde otro PC (Git)
-
-```powershell
-cd carpeta-del-proyecto
-git pull origin main
-# editar...
-git add .
-git commit -m "Descripción"
-git push origin main
-```
-
-Ver también §9 (Git en el PC de Víctor): no hacer `git add .` dentro de Descargas.
-
 ## 3. Datos
 
-**ThingSpeak** (canal 3540815): campo 1 = temperatura del aire (°C) · campo 2 = humedad del aire (%) · campo 3 = humedad del suelo (%) · campo 4 = pH. Enviar cada **≥ 20 s** (la cuenta gratis exige ≥ 15 s).
+**ThingSpeak** (canal 3540815): campo 1 = temperatura del aire (°C) · campo 2 = humedad del aire (%) · campo 3 = humedad del suelo (%) · campo 4 = pH. Enviar cada **≥ 20 s** (la cuenta gratis exige ≥ 15 s). La *Write API Key* se entrega **solo por privado** a José, nunca al grupo.
 
-**Write API Key:** se obtiene en Canal → API Keys → **Write API Key** (no la Read). **Pasar solo a José por mensaje privado**, nunca en el grupo.
-
-Prueba en navegador:
-
-```
-https://api.thingspeak.com/update?api_key=LA_WRITE_API_KEY&field1=25&field2=60&field3=45&field4=6.5
-```
-
-- Número ≥ 1 → OK  
-- 0 → esperar ≥ 15 s entre envíos  
-- 400 → key incorrecta (casi siempre Read en vez de Write, o espacio al pegar)
-
-Antes de datos reales del ESP32: Channel Settings → **Clear Channel**.
-
-**Neon (PostgreSQL)**, tablas clave: `muestras_suelo` (`Muestra_Id`, `Sensor_Id`, `Parametro_Id`, `Muestra_Valor`, `Muestra_FechaHora`), `parametros_medidos`, `sensores`, `lotes_tierra`, `usuarios` y otras. El ESP32 envía cada lectura con `POST /muestras/create` `{Sensor_Id, Parametro_Id, Muestra_Valor}`. Ya hay datos reales (p. ej. `/menu/promedio-24h` respondió con valores).
+**Neon (PostgreSQL)**, tablas clave: `muestras_suelo` (`Muestra_Id`, `Sensor_Id`, `Parametro_Id`, `Muestra_Valor`, `Muestra_FechaHora`), `parametros_medidos`, `sensores`, `lotes_tierra`, `usuarios` y otras. El ESP32 envía cada lectura con `POST /muestras/create` `{Sensor_Id, Parametro_Id, Muestra_Valor}`.
 
 **Hora de las muestras:** si no viene fecha, el backend guarda `datetime.now()` **del servidor** (UTC en Railway). Colombia es UTC-5. *Supuesto a confirmar:* que todas las muestras estén en UTC (si hubo pruebas con el backend en un PC local, algunas pueden estar en hora de Colombia).
 
-**Rangos «normales»** (página, bot y puente; salen de `frontend/js/config.js`, `RANGOS`):
+**Rangos «normales»** (los usan la página, el bot y el puente; salen de `frontend/js/config.js`, `RANGOS`):
 
 | Variable | Normal | Límites de alerta |
 |---|---|---|
@@ -101,73 +73,14 @@ Antes de datos reales del ESP32: Channel Settings → **Clear Channel**.
 ## 4. Backend (`AgroIABackend`)
 
 - **Tecnología:** FastAPI + SQLAlchemy + Neon. **Despliegue:** `Dockerfile` (`python:3.12-slim` + `libxcb1`, `libgl1`, `libglib2.0-0`, OpenCV headless). `railway.toml` con `builder = "DOCKERFILE"`, arranque `uvicorn main:app --host 0.0.0.0 --port $PORT`, healthcheck `/docs`. Hay `.dockerignore`; `imagenes/` y `uploads/` no van al despliegue; `models/best.pt` sí.
-- **Variables de entorno en Railway** (solo nombres):
-
-| Variable | Uso | ¿Crítica? |
-|---|---|---|
-| `DATABASE_URL` | Neon PostgreSQL | **Sí** |
-| `SECRET_KEY` | JWT | **Sí** |
-| `ALGORITHM` | Normalmente `HS256` | **Sí** |
-| `GOOGLE_CLIENT_ID` | Login Google | Para Google |
-| `GOOGLE_CLIENT_SECRET` | Login Google | Para Google |
-| `GOOGLE_REDIRECT_URI` | Callback OAuth del backend (prod: `https://agroiabackend.up.railway.app/auth/google/callback`) | Para Google |
-| `FRONTEND_URL` | Redirect tras Google (prod: `https://agroia-suelo.up.railway.app`, sin barra final) | Para Google |
-| `INFLUXDB_*` | No se usan en la nube | No |
-
+- **Variables de entorno en Railway** (solo nombres): `DATABASE_URL` (crítica), `SECRET_KEY`, `ALGORITHM` (HS256), `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `GOOGLE_REDIRECT_URI` (opcionales), `INFLUXDB_URL` / `INFLUXDB_DATABASE` / `INFLUXDB_TOKEN` (**no se usan en la nube**).
 - **Rutas principales:** `/auth`, `/users`, `/zonas_geograficas`, `/tipos_suelo`, `/lotes`, `/tipos_sensor`, `/sensores`, `/parametros`, `/muestras`, `/alertas`, `/consultas-llm`, `/iot`, `/vision` (`/analizar`, `/camara`, stream), `/menu`, `/esp32`.
-
-### Menú LCD ESP32 (`/menu/*`) — desplegados y probados
-
-| Tecla | Endpoint | Estado |
-|---|---|---|
-| 2 | `GET /menu/ultimo-registro` | OK |
-| 3 | `GET /menu/promedio-24h` | OK (probado con datos reales) |
-| 4 | `GET /menu/max-min-hoy` | OK |
-| 5 | `GET /menu/promedio-por-hora` | OK |
-| 6 | `GET /menu/muestras-por-dia` | OK |
-| 7 | `GET /menu/dias-bajo-umbral` | OK |
-| A | `GET /menu/desviacion` | OK |
-| 1, 8, 9, 0, B | Lógica local en el ESP32 | No usan la API |
-
-Respuesta: `{linea1, linea2, detalle}` (línea1 y línea2 ≤ 16 caracteres, LCD 16×2). Abreviaturas: **T** temperatura · **A** humedad del aire · **S** humedad del suelo · **P** pH.
-
-Ejemplo real:
-
-```
-https://agroiabackend.up.railway.app/menu/promedio-24h
-→ {"linea1":"Prom 24h","linea2":"A63 S25 T33","detalle":"Humedad del aire: 62.7; ..."}
-```
-
-### `/esp32/comando` (Punto 4)
-
-| Método | Uso |
-|---|---|
-| `GET` | El ESP32 consulta; devuelve `{accion: "" \| "encender_led" \| "apagar_led"}` y limpia |
-| `POST` | Body `{accion}` para fijar la orden (chat / Swagger). Vive en memoria del proceso |
-
-### Visión / YOLO
-
-| Método | Endpoint | Nota |
-|---|---|---|
-| POST | `/vision/analizar` | OK |
-| GET | `/vision/camara` | Stream |
-| POST | `/vision/fusion`, `/vision/reporte-pdf` | Dependen de Influx → no usar en UI |
-
-### Auth
-
-| Método | Endpoint | Nota |
-|---|---|---|
-| POST | `/auth/login` | Usuario/clave → JWT |
-| GET | `/auth/google` | Inicia OAuth Google |
-| GET | `/auth/google/callback` | Intercambia code, crea usuario si falta, redirige a `{FRONTEND_URL}/index.html?token=JWT` |
-
-### InfluxDB
-
-No hay instancia en la nube. `/iot/ultima-medicion`, `/iot/historial`, `/vision/fusion` y `/vision/reporte-pdf` fallan por eso; la interfaz los tiene **ocultos** (decisión del equipo: el profesor no exige Influx).
+- **`/menu/*` (menú LCD del ESP32, teclas 2–7 y A):** `ultimo-registro`, `promedio-24h`, `max-min-hoy`, `promedio-por-hora`, `muestras-por-dia`, `dias-bajo-umbral`, `desviacion`. Respuesta: `{linea1, linea2, detalle}` (línea1 y línea2 ≤ 16 caracteres, para la LCD 16×2). Abreviaturas: **T** temperatura · **A** humedad del aire · **S** humedad del suelo · **P** pH. Las teclas 1, 8, 9, 0 y B son locales del ESP32.
+- **`/esp32/comando`:** `GET` (el ESP32 consulta; devuelve `{accion: "" | "encender_led" | "apagar_led"}` y limpia) y `POST` (`{accion}` para fijar la orden). Vive en la memoria del proceso.
+- **InfluxDB:** no hay instancia en la nube. `/iot/ultima-medicion`, `/iot/historial`, `/vision/fusion` y `/vision/reporte-pdf` fallan por eso; la interfaz los tiene **ocultos** (decisión del equipo: el profesor no exige Influx).
 
 **Problemas conocidos del backend**
-
-1. **«Hoy» en UTC** en las teclas 4–7 de `/menu` (usan `CURRENT_DATE`/`NOW()` de la base): «hoy» empieza a las 7 p. m. de Colombia. **Parche entregado** (`AgroIA_backend_parche_hora_colombia.zip`). *Estado: por confirmar si ya se aplicó.*
+1. **«Hoy» en UTC** en las teclas 4–7 de `/menu` (usan `CURRENT_DATE`/`NOW()` de la base): «hoy» empieza a las 7 p. m. de Colombia. **Parche entregado** (`AgroIA_backend_parche_hora_colombia.zip`, 7 líneas de SQL en `app/routes/menu_routes.py`, probado contra PostgreSQL real). *Estado: por confirmar si ya se aplicó.*
 2. **`/menu/ultimo-registro`** (sin verificar en producción): su SQL filtra por la fecha exacta de la última muestra, así que probablemente devuelve una sola variable.
 3. **`/chat` no existe** (Punto 4, a cargo de Thair).
 4. **`/users/list`** es público y devuelve contraseñas en texto plano — hay que protegerlo.
@@ -177,8 +90,7 @@ No hay instancia en la nube. `/iot/ultima-medicion`, `/iot/historial`, `/vision/
 ## 5. Frontend (`PAgroIA`)
 
 - **Qué es:** página estática (HTML/CSS/JS, sin librerías) servida con `serve.py` en Railway (`Procfile`). Se publica con el contenido en la raíz del repo.
-- **`js/config.js`:** `API_PRODUCCION = https://agroiabackend.up.railway.app`, **`SESION_OBLIGATORIA = true`** (login obligatorio; tradicional + Google), `THINGSPEAK = {channelId: "3540815", campos: {temp:1, humAire:2, humSuelo:3, ph:4}}`, `RANGOS`, `CLASIFICADOR.url = ""` (vacío: la predicción usa reglas hasta que el modelo del Punto 3 tenga URL).
-- **Login Google:** el backend redirige a `{FRONTEND_URL}/index.html?token=JWT`. En Google Cloud hay que registrar el `GOOGLE_REDIRECT_URI` del backend. El callback ya no está hardcodeado a localhost (v1.1).
+- **`js/config.js`:** `API_PRODUCCION = https://agroiabackend.up.railway.app`, `SESION_OBLIGATORIA = false` (abre sin iniciar sesión), `THINGSPEAK = {channelId: "3540815", campos: {temp:1, humAire:2, humSuelo:3, ph:4}}`, `RANGOS`, `CLASIFICADOR.url = ""` (vacío: la predicción usa reglas hasta que el modelo del Punto 3 tenga URL).
 - **Pantallas:** Inicio (`dashboard.html`), Monitoreo, Historial (tabla, gráfico y CSV), Predicción de fertilidad, Chat con IA, Configuración, y las pestañas del backend: Analizar imagen (YOLO), Cámara en vivo, Alertas.
 - **Ocultas (no borradas):** Telemetría InfluxDB, Análisis integrado, Reportes PDF, Control IoT.
 - **Móvil:** barra inferior *Inicio · Monitoreo · Análisis (→ `pages/vision.html`) · Historial · Más*. La **cámara en vivo** abre la cámara trasera y tiene un botón **«Cambiar cámara»** (frontal/trasera).
@@ -231,65 +143,19 @@ Cada **60 s** lee los datos **filtrados por variable** y los envía a dispositiv
 
 | Punto | Pts | Responsable | Estado |
 |---|---|---|---|
-| 1. Menú LCD con teclado + SQL | 20 | Thair (API) + José (ESP32) | API `/menu/*` en producción y probada con datos reales; José debe apuntar el firmware a Railway y probar teclas 2–7 y A |
+| 1. Menú LCD con teclado + SQL | 20 | Thair (API) + José (ESP32) | API `/menu/*` en producción; José debe apuntar el firmware a Railway y probar teclas 2–7 y A |
 | 2. ThingSpeak + web | 25 | **Víctor** | Canal público y página en Railway; falta el envío real del ESP32 |
 | 3. Edge Impulse | 25 | Julián + Kenny | Pendiente (poner su URL en `CLASIFICADOR.url`) |
 | 4. Chat con IA | 30 | Todos | `/esp32/comando` listo; faltan `/chat` y que el firmware consulte cada X segundos |
 
-### Qué pasarle a cada uno
-
-**José (privado si incluye keys):**
-
-```
-URL API: https://agroiabackend.up.railway.app
-Menú: /menu/ultimo-registro, /menu/promedio-24h, ...
-ESP32: GET /esp32/comando
-ThingSpeak Channel ID: 3540815
-Write API Key: (solo privado)
-Campos: 1=temp, 2=hum aire, 3=hum suelo, 4=pH
-Enviar cada ≥ 20 s
-```
-
-**Julián / Kenny:**
-
-```
-API: https://agroiabackend.up.railway.app
-Docs: https://agroiabackend.up.railway.app/docs
-Frontend: https://agroia-suelo.up.railway.app
-```
-
-**Thair:**
-
-```
-Confirmar DATABASE_URL en Railway si algo de menú/SQL falla.
-Endpoints /menu y /esp32 ya están en el repo y en producción.
-Pendiente: /chat, proteger /users/list.
-```
-
-### Pendientes abiertos
-
+**Pendientes abiertos**
 - [ ] Aplicar el parche de la hora de Colombia al backend y comprobar que las muestras están en UTC (hora de `/muestras/list` vs hora UTC).
 - [ ] José: ThingSpeak responde **400** (petición mal armada: clave mal copiada, `nan`, coma decimal, espacios). Probar la clave en el navegador. Entregarle la Write API Key **solo por privado**.
 - [ ] José: firmware con la URL de Railway y consulta periódica a `/esp32/comando`.
 - [ ] Thair: `/chat`, proteger `/users/list`, confirmar `DATABASE_URL` en Railway.
-- [ ] Víctor: variables Google + `FRONTEND_URL` en Railway del backend; desplegar frontend con `SESION_OBLIGATORIA = true`; opcional *Serverless*; `SOLO_DATOS_REALES` en bot/Sinric si se exige cero invención; opcional crear «AgroIA Suelo» en Sinric.
-- [ ] Configurar OAuth en Google Cloud (CLIENT_ID/SECRET + redirect URI del backend) para «Continuar con Google».
+- [ ] Víctor: variable `API_URL` en los servicios del bot y de Sinric; activar *Serverless* en el panel de Railway si se quiere; `SOLO_DATOS_REALES` si se exige cero invención; opcional crear «AgroIA Suelo» en Sinric.
 - [ ] Idioma en inglés de la temperatura en Google.
 - [ ] Edge Impulse; chat de IA completo; video de demostración.
-
-### Checklist «¿seguimos bien?»
-
-- [x] API en Railway responde `/docs`
-- [x] `/menu/promedio-24h` devuelve JSON con datos
-- [x] Frontend apunta a `agroiabackend.up.railway.app`
-- [x] InfluxDB oculto en la UI
-- [x] YOLO usable en móvil (botón Análisis)
-- [x] Código de login obligatorio + Google con `FRONTEND_URL` (zips v1.1/v1.2; falta desplegar y credenciales Google)
-- [ ] José con firmware apuntando a Railway y teclas 2–7 / A OK
-- [ ] Write API Key de ThingSpeak entregada a José (privado)
-- [ ] Variables Google + `FRONTEND_URL` en Railway y prueba de login
-- [ ] Edge Impulse (Julián/Kenny)
-- [ ] Chat IA completo + video demo
 
 ## 9. Git en el PC de Víctor (lección aprendida)
 
@@ -303,77 +169,28 @@ Pendiente: /chat, proteger /users/list.
 - **Serverless / «sleep application»:** `railway.json` trae `sleepApplication: true`, pero la documentación actual de Railway marca esos archivos de configuración como obsoletos; el método seguro es el panel: servicio → Settings → Deploy → Serverless → Enable, y **redesplegar**. Un servicio dormido tarda en la primera visita (o da un 502 pasajero): abrirlo un minuto antes de presentar.
 - Los servicios del bot y de Sinric usan `Procfile` con `web:`; no escuchan HTTP salvo el bot (webhook de Telegram).
 
-### Problemas ya resueltos (recordatorio)
-
-| Problema | Solución |
-|---|---|
-| Build Nixpacks / `pip not found` | Dockerfile + `railway.toml` con `builder = "DOCKERFILE"` |
-| OpenCV `libxcb.so.1` missing | `apt-get` de libxcb1, libgl1, libglib2.0-0 en Dockerfile |
-| InfluxDB `localhost:8181` connection refused | Ocultar UI de Influx/fusión/reportes |
-| YOLO no accesible en celular | Botón **Análisis** en barra inferior → `pages/vision.html` |
-| Endpoints `/menu/*` → 404 | Implementados y desplegados |
-| ThingSpeak 400 | Revisar Write API Key (no Read); pasar a José en privado |
-| Redirect Google a localhost | `FRONTEND_URL` en env + callback corregido (v1.1) |
-
 ## 11. Qué está verificado y qué no
 
 **Verificado por mí con datos simulados:** frontend (46/46 + móvil), bot (93/93, 41/41), capa de datos (14/14), puente Sinric (23/23), parche de hora de Colombia (4 horas simuladas contra PostgreSQL real, 0 fallas con el parche).
 
-**Verificado en producción (parcial):** API `/docs`, `/menu/promedio-24h` con datos reales, frontend apuntando a Railway.
-
-**No verificado contra servicios reales:** login obligatorio en el frontend desplegado, OAuth Google de extremo a extremo, Groq, Telegram, Sinric Pro, Google/Gemini, Alexa y el resto del despliegue en Railway tras los cambios de auth. El primer arranque en producción lo confirma (logs de Railway).
+**No verificado contra servicios reales:** la API y la base Neon de producción, Groq, Telegram, Sinric Pro, Google/Gemini, Alexa y el despliegue en Railway. El primer arranque en producción lo confirma (logs de Railway). Los zips del frontend y del backend son la **copia que Víctor subió** en su momento; si el repositorio cambió después, copiar **solo** `CONTEXTO.md`.
 
 ## 12. Seguridad
 
-- **Nunca** subir a GitHub ni compartir en el grupo: `.env`, `TELEGRAM_TOKEN`, `GROQ_API_KEY`, `SINRIC_APP_SECRET`, la Write API Key de ThingSpeak, la `DATABASE_URL` de Neon, `GOOGLE_CLIENT_SECRET`, `SECRET_KEY`.
+- **Nunca** subir a GitHub ni compartir en el grupo: `.env`, `TELEGRAM_TOKEN`, `GROQ_API_KEY`, `SINRIC_APP_SECRET`, la Write API Key de ThingSpeak, la `DATABASE_URL` de Neon.
 - Algunas claves aparecieron en documentos y chats anteriores (por ejemplo la contraseña de Neon y el token de InfluxDB): se recomienda **rotarlas**.
 - `.gitignore` de cada repo debe incluir `.env`.
 
-## 13. Mensajes listos para copiar
-
-### Para José (API menú)
-
-```
-Listo. Endpoints del menú en Railway (ya no Render):
-
-https://agroiabackend.up.railway.app
-
-Prueba: https://agroiabackend.up.railway.app/menu/promedio-24h
-
-Devuelve linea1, linea2 y detalle.
-Pon esa URL base en el firmware y prueba teclas 2–7 y A.
-```
-
-### Para el grupo (sin secrets)
-
-```
-API producción: https://agroiabackend.up.railway.app
-Docs: https://agroiabackend.up.railway.app/docs
-Web: https://agroia-suelo.up.railway.app
-ThingSpeak canal: 3540815 (público)
-```
-
-## 14. Reglas de mantenimiento de este documento
+## 13. Reglas de mantenimiento de este documento
 
 1. **Cada cambio** (código, variables, URLs, pendientes, decisiones) actualiza las secciones afectadas **y** agrega una entrada arriba del «Registro de cambios», con fecha y qué zips se tocaron.
-2. Se **sube la versión** del documento (v1.0 → v1.1 → v1.2 → …) y se actualiza la fecha de la cabecera.
+2. Se **sube la versión** del documento (v1.0 → v1.1 → …) y se actualiza la fecha de la cabecera.
 3. **La misma copia** va en los 4 zips y como `AgroIA_CONTEXTO.md` suelto. Si un zip no cambió, se le agrega de todos modos el documento nuevo.
 4. Sin claves ni contraseñas: solo nombres de variables.
 5. Lo no verificado se marca como «por confirmar»; se quita la marca solo cuando alguien lo comprueba.
 6. **Chat nuevo:** subir este archivo al principio. No hay memoria entre conversaciones; este documento es la memoria.
 
-## 15. Registro de cambios (lo más reciente arriba)
-
-### v1.2 — 19 oct 2026 — Integración del contexto operativo del equipo
-- Se fusiona el documento operativo (URLs, menú probado, mensajes para José/grupo, checklist, variables en tabla, qué pasarle a cada uno) con el maestro.
-- Se mantiene el estado de login: `SESION_OBLIGATORIA = true`, `FRONTEND_URL`, Google documentado.
-- Zips tocados: **frontend, backend** (misma copia de `CONTEXTO.md` + README alineados).
-
-### v1.1 — 19 oct 2026 — Login obligatorio y Google listo para producción
-- **Frontend:** `SESION_OBLIGATORIA = true`; se quitó el auto-redirect de `index.html` al dashboard cuando la sesión no era obligatoria.
-- **Backend:** `FRONTEND_URL` (env) para el redirect del callback de Google; ya no apunta fijo a `http://localhost:5500`.
-- **Documentación:** `.env.example`, README de frontend y backend actualizados (variables Google + FRONTEND_URL).
-- Zips tocados: **frontend, backend**.
+## 14. Registro de cambios (lo más reciente arriba)
 
 ### v1.0 — 19 oct 2026 — Creación del documento maestro
 - Se crea `CONTEXTO.md` con todo el contexto de los 4 componentes. Zips tocados: **frontend, backend, bot, Sinric** (solo se les agrega este documento y una línea en los README).

@@ -15,6 +15,7 @@
     <p class="login-lema">Tecnología que cultiva<br>un mejor mañana</p>
   </section>
 
+  
   <section class="login-card">
     <h1>Iniciar sesión</h1>
     <p class="sub">Accede a tu panel de control</p>
@@ -72,7 +73,13 @@
   $("entrar").insertAdjacentHTML("beforeend", ico("i-arrow"));
 </script>
 
-<!-- Auto-redirect al dashboard desactivado: SESION_OBLIGATORIA = true -->
+<script>
+document.addEventListener("DOMContentLoaded", function() {
+  if (typeof SESION_OBLIGATORIA !== "undefined" && !SESION_OBLIGATORIA) {
+    window.location.replace("dashboard.html");
+  }
+});
+</script>
 
 </body>
 </html>
