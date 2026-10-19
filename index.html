@@ -72,13 +72,7 @@
   $("entrar").insertAdjacentHTML("beforeend", ico("i-arrow"));
 </script>
 
-<script>
-document.addEventListener("DOMContentLoaded", function() {
-  if (typeof SESION_OBLIGATORIA !== "undefined" && !SESION_OBLIGATORIA) {
-    window.location.replace("dashboard.html");
-  }
-});
-</script>
+<!-- Auto-redirect al dashboard desactivado: SESION_OBLIGATORIA = true -->
 
 </body>
 </html>

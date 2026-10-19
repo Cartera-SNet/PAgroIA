@@ -8,8 +8,8 @@ const ES_LOCAL = ["localhost", "127.0.0.1", ""].includes(location.hostname);
 const API_BASE_URL = ES_LOCAL ? "http://localhost:8000" : API_PRODUCCION;
 
 // true  = hay que iniciar sesión para ver las páginas (login del backend).
-// false = se puede abrir dashboard.html directo, sin backend (lo usa el Punto 2 publicado en Railway).
-const SESION_OBLIGATORIA = false;
+// false = se puede abrir dashboard.html directo, sin backend.
+const SESION_OBLIGATORIA = true;
 const WS_BASE_URL = API_BASE_URL.replace(/^http/, "ws");
 // Campos del login tradicional. VERIFICAR contra http://localhost:8000/docs
 const LOGIN_CAMPOS = { usuario: "username", clave: "password", tokenRespuesta: "access_token" };
