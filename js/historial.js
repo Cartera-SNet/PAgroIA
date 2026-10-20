@@ -1,5 +1,5 @@
 /* ==========================================================
-   AgroIA - Historial de datos (fuente: ThingSpeak canal público, NO la tabla muestras de Neon)
+   AgroIA - Historial: prioriza API Neon (/muestras, TDS=Parametro_Id 5); respaldo ThingSpeak
    Rango de fechas + parámetro + intervalo (promedio), gráfico con doble eje, tabla paginada y CSV.
    ========================================================== */
 montarLayout({ nuevo: true, estadoPropio: true, buscador: "Buscar por fecha, parámetro o tipo de dato..." });
@@ -60,11 +60,25 @@ montarLayout({ nuevo: true, estadoPropio: true, buscador: "Buscar por fecha, par
     if (!tsCfg().channelId) { vacio("Falta configurar el canal de ThingSpeak (Configuración)."); return; }
     $("aplicar").disabled = true;
     try {
-      const res = await tsFeeds({ results: 8000, start: d + " 00:00:00", end: h + " 23:59:59", average: it > 0 ? it : 0 });
-      datos = res.feeds; cargado = true; pagina = 1;
+      let feeds = [];
+      // 1) Preferir API Neon (incluye TDS Parametro_Id 5)
+      try {
+        const neon = await cargarMuestras(true);
+        if (neon && neon.feeds && neon.feeds.length) {
+          const d0 = new Date(d + "T00:00:00");
+          const h0 = new Date(h + "T23:59:59");
+          feeds = neon.feeds.filter(f => f.t >= d0 && f.t <= h0);
+        }
+      } catch (eN) { console.warn("Neon historial", eN); }
+      // 2) Si Neon vacío, ThingSpeak
+      if (!feeds.length) {
+        const res = await tsFeeds({ results: 8000, start: d + " 00:00:00", end: h + " 23:59:59", average: it > 0 ? it : 0 });
+        feeds = res.feeds || [];
+      }
+      datos = feeds; cargado = true; pagina = 1;
       pintarKPIs(); pintarGrafico(); subtitulo(); pintarTabla();
       $("h-punto").className = "punto";
-    } catch (e) { console.error(e); datos = []; cargado = true; vacio("No fue posible consultar ThingSpeak. Intenta de nuevo."); $("h-punto").className = "punto bad"; }
+    } catch (e) { console.error(e); datos = []; cargado = true; vacio("No fue posible consultar la API ni ThingSpeak."); $("h-punto").className = "punto bad"; }
     $("aplicar").disabled = false;
   }
   function subtitulo() {

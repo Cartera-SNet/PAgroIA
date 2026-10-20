@@ -1,8 +1,9 @@
-/* Cámara en vivo: YOLO por WebSocket + telemetría desde ThingSpeak (no Influx). */
+/* Cámara en vivo: YOLO por WebSocket + panel = detección visual + sensores (Neon/ThingSpeak). */
 montarLayout();
 const v = $("video"), c = $("canvas"), x = c.getContext("2d");
 const cx = document.createElement("canvas"), cxx = cx.getContext("2d");
 let ws, vuelo = false, pausa = false;
+let ultimaDeteccion = null; // { clase, confianza, n }
 
 v.onloadedmetadata = () => { c.width = v.videoWidth; c.height = v.videoHeight; };
 
@@ -34,33 +35,80 @@ function cambiarCamara() {
 }
 document.getElementById("cambiar-cam")?.addEventListener("click", cambiarCamara);
 
-function pintarTelemetriaDesdeTS(feeds) {
+/** Panel derecho: 1) lo que ve YOLO  2) sensores (último valor por variable, no un solo segundo) */
+function pintarPanel() {
   const tel = $("tel");
   if (!tel) return;
-  const ult = feeds && feeds[0] && feeds[0].v ? feeds[0].v : null;
-  const cuando = feeds && feeds[0] && feeds[0].t ? feeds[0].t : null;
-  if (!ult) {
-    tel.innerHTML = "<div class=\"det\">Sin datos recientes en ThingSpeak.</div>";
-    return;
+  const partes = [];
+
+  // —— Visión (lo que “ve” la cámara) ——
+  partes.push('<div class="det" style="font-weight:600;margin-bottom:6px">Lo que ve la cámara</div>');
+  if (ultimaDeteccion && ultimaDeteccion.n > 0) {
+    const pct = ultimaDeteccion.confianza <= 1
+      ? (ultimaDeteccion.confianza * 100).toFixed(1)
+      : Number(ultimaDeteccion.confianza).toFixed(1);
+    partes.push(
+      `<div class="det">Clase: <b>${esc(ultimaDeteccion.clase || "—")}</b></div>` +
+      `<div class="det">Confianza: <b>${pct}%</b></div>` +
+      `<div class="det">Detecciones: <b>${ultimaDeteccion.n}</b></div>`
+    );
+  } else {
+    partes.push('<div class="det">Sin detección YOLO aún (apunta al suelo).</div>');
   }
-  const lineas = TS_MEDIDAS.map(m => {
-    const val = ult[m.clave];
-    const txt = (val === null || val === undefined) ? "—" : fmtVal(m, val);
-    return `<div class="det">${m.nombre}: <b>${txt}</b></div>`;
-  });
-  if (cuando) {
-    lineas.push(`<div class="det" style="margin-top:8px;opacity:.75;font-size:12px">Última lectura: ${fmtFechaHora(cuando)}</div>`);
+
+  partes.push('<hr style="border:none;border-top:1px solid #e5e7eb;margin:12px 0">');
+  partes.push('<div class="det" style="font-weight:600;margin-bottom:6px">Sensores (API / IoT)</div>');
+
+  // —— Sensores: último valor no nulo por clave ——
+  const R = window._telResumen;
+  const cuando = window._telCuando;
+  if (R && typeof TS_MEDIDAS !== "undefined") {
+    TS_MEDIDAS.forEach(m => {
+      const r = R[m.clave] || {};
+      const txt = (r.ult === null || r.ult === undefined) ? "—" : fmtVal(m, r.ult);
+      partes.push(`<div class="det">${m.nombre}: <b>${txt}</b></div>`);
+    });
+    if (cuando) {
+      partes.push(`<div class="det" style="margin-top:8px;opacity:.75;font-size:12px">Última lectura sensor: ${fmtFechaHora(cuando)}</div>`);
+    }
+  } else {
+    partes.push('<div class="det">Cargando sensores…</div>');
   }
-  tel.innerHTML = lineas.join("");
+
+  tel.innerHTML = partes.join("");
 }
 
 async function refrescarTelemetria() {
   try {
-    const res = await tsFeeds({ results: 3 });
-    pintarTelemetriaDesdeTS(res.feeds || []);
+    let resumen = null;
+    let cuando = null;
+    try {
+      if (typeof cargarMuestras === "function") {
+        const neon = await cargarMuestras();
+        if (neon && neon.resumen) {
+          resumen = neon.resumen;
+          cuando = neon.resumen._tUlt || null;
+        }
+      }
+    } catch (e1) { console.warn(e1); }
+
+    if (!resumen || (resumen.tds && resumen.tds.ult == null && resumen.temp && resumen.temp.ult == null)) {
+      try {
+        const res = await tsFeeds({ results: 20 });
+        const feeds = (res && res.feeds) || [];
+        resumen = tsResumen(feeds);
+        if (feeds.length) {
+          cuando = feeds.reduce((a, b) => (a.t > b.t ? a : b)).t;
+        }
+      } catch (e2) { console.warn(e2); }
+    }
+
+    window._telResumen = resumen;
+    window._telCuando = cuando;
+    pintarPanel();
   } catch (e) {
     const tel = $("tel");
-    if (tel) tel.innerHTML = "<div class=\"det\">No se pudo leer ThingSpeak.</div>";
+    if (tel) tel.innerHTML = "<div class=\"det\">No se pudieron leer sensores.</div>";
   }
 }
 
@@ -77,6 +125,8 @@ function conectar() {
     const e = Math.max(c.width / 640, 1);
     x.clearRect(0, 0, c.width, c.height);
     $("cant").textContent = dets.length;
+
+    let best = null;
     dets.forEach(o => {
       const b = o.bbox || {
         x1: o.x_min, y1: o.y_min, x2: o.x_max, y2: o.y_max
@@ -89,17 +139,13 @@ function conectar() {
       const conf = (o.confianza != null ? o.confianza : 0);
       const pct = conf <= 1 ? (conf * 100).toFixed(1) : Number(conf).toFixed(1);
       x.fillText(`${o.clase} ${pct}%`, b.x1, Math.max(b.y1 - 6, 16 * e));
+      if (!best || conf > best.confianza) best = { clase: o.clase, confianza: conf };
     });
-    // Telemetría del WS solo si trae datos útiles; si no, se mantiene ThingSpeak
-    const t = d.telemetria;
-    if (t && !t.error && Object.keys(t).length) {
-      const tiene = Object.values(t).some(v => v !== null && v !== undefined && v !== "" && v !== "--");
-      if (tiene && typeof CAMPOS !== "undefined") {
-        $("tel").innerHTML = CAMPOS.map(([k, n, u]) =>
-          `<div class="det">${n}: <b>${esc(t[k] ?? "—")} ${u || ""}</b></div>`
-        ).join("");
-      }
-    }
+
+    ultimaDeteccion = best
+      ? { clase: best.clase, confianza: best.confianza, n: dets.length }
+      : { clase: null, confianza: 0, n: 0 };
+    pintarPanel();
   };
 }
 

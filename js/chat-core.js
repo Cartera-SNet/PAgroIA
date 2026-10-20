@@ -78,9 +78,17 @@ async function respuestaLocal(texto) {
 
   var feeds = [];
   try {
-    var res = await tsFeeds({ results: 10 });
-    feeds = (res && res.feeds) ? res.feeds : [];
+    if (typeof cargarMuestras === "function") {
+      var neon = await cargarMuestras();
+      if (neon && neon.feeds && neon.feeds.length) feeds = neon.feeds;
+    }
   } catch (e) {}
+  if (!feeds.length) {
+    try {
+      var res = await tsFeeds({ results: 10 });
+      feeds = (res && res.feeds) ? res.feeds : [];
+    } catch (e) {}
+  }
 
   var ult = {};
   var cuando = null;

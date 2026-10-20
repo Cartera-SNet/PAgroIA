@@ -35,14 +35,22 @@ montarLayout({ nuevo: true, estadoPropio: true });
   }
 
   async function actualizar() {
-    var res = null;
+    var res = null, neon = null;
     try { res = await tsFeeds({ results: tsCfg().resultados }); }
-    catch (e) { console.error(e); setEstadoSistema("bad", "Sin conexión con ThingSpeak", null); }
-    var R = tsResumen(res ? res.feeds : []);
-    TS_MEDIDAS.forEach(function (m) { pintarKPI(m, R[m.clave]); });
-    pintarSuelo(R.humSuelo);
-    if (res) tsPintarEstado(res);
-    else if (!tsCfg().channelId) tsPintarEstado(null);
+    catch (e) { console.error(e); }
+    try { neon = await cargarMuestras(); }
+    catch (e) { console.error("Neon muestras", e); }
+    var Rts = tsResumen(res ? res.feeds : []);
+    var R = (typeof fusionarResumen === "function" && neon)
+      ? fusionarResumen(Rts, neon.resumen) : Rts;
+    // Si TS no tiene TDS pero Neon sí, forzar KPI
+    TS_MEDIDAS.forEach(function (m) { pintarKPI(m, R[m.clave] || { ult: null, primero: null, n: 0 }); });
+    pintarSuelo(R.humSuelo || { ult: null });
+    if (res && res.feeds && res.feeds.length) tsPintarEstado(res);
+    else if (neon && neon.resumen && neon.resumen._tUlt) {
+      setEstadoSistema("ok", "Sistema en línea (API Neon)", neon.resumen._tUlt);
+    } else if (!tsCfg().channelId) tsPintarEstado(null);
+    else setEstadoSistema("warn", "Sin datos recientes", null);
   }
 
   // Chat mini: no debe tumbar el resto del dashboard

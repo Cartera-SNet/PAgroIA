@@ -96,7 +96,16 @@ montarLayout({ nuevo: true, estadoPropio: true });
       const res = await tsFeeds({ results: 10 }); tsPintarEstado(res);
       const R = tsResumen(res ? res.feeds : []);
       if (!res || !res.feeds.length) { $("origen-datos").textContent = "El canal todavía no tiene lecturas."; return false; }
-      CAMPOS_P.forEach(k => { if (R[k].ult !== null) $("p-" + k).value = Number(R[k].ult).toFixed(tsMedida(k).dec); });
+      CAMPOS_P.forEach(k => { if (R[k] && R[k].ult !== null) $("p-" + k).value = Number(R[k].ult).toFixed(tsMedida(k).dec); });
+      try {
+        const neon = await cargarMuestras();
+        if (neon && neon.resumen) {
+          CAMPOS_P.forEach(k => {
+            const u = neon.resumen[k] && neon.resumen[k].ult;
+            if (u != null && (!$("p-" + k).value || k === "tds")) $("p-" + k).value = Number(u).toFixed(tsMedida(k).dec);
+          });
+        }
+      } catch (e) {}
       $("origen-datos").textContent = "Valores tomados de la última lectura de ThingSpeak (" + fmtFechaHora(res.feeds[res.feeds.length - 1].t) + "). Puedes editarlos.";
       return true;
     } catch (e) { console.error(e); $("origen-datos").textContent = "No fue posible leer ThingSpeak."; if (!auto) avisarToast("No fue posible leer ThingSpeak."); return false; }

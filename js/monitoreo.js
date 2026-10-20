@@ -13,12 +13,19 @@ montarLayout({ nuevo: true, estadoPropio: true });
     let res = null;
     try { res = await tsFeeds({ results: tsCfg().resultados }); }
     catch (e) { console.error(e); setEstadoSistema("bad", "Sin conexión con ThingSpeak", null); }
-    const R = tsResumen(res ? res.feeds : []);
+    let R = tsResumen(res ? res.feeds : []);
+    try {
+      const neon = await cargarMuestras();
+      if (neon && typeof fusionarResumen === "function") R = fusionarResumen(R, neon.resumen);
+    } catch (eN) {}
     TS_MEDIDAS.forEach(m => pintarKPI(m, R[m.clave]));
-    if (res) {
+    if (res && res.feeds && res.feeds.length) {
       tsPintarEstado(res);
-      const ult = res.feeds.length ? res.feeds[res.feeds.length - 1].t : null;
-      $("nota-ts").textContent = "Gráficos oficiales de ThingSpeak. Se actualizan solos cada 15 segundos." + (ult ? " Última lectura: " + fmtFechaHora(ult) + "." : "");
+      const ult = res.feeds[res.feeds.length - 1].t;
+      $("nota-ts").textContent = "Tarjetas: API Neon + ThingSpeak (TDS = Parametro_Id 5). Gráficos: ThingSpeak." + (ult ? " Última TS: " + fmtFechaHora(ult) + "." : "");
+    } else if (R.tds && R.tds.ult != null) {
+      setEstadoSistema("ok", "Sistema en línea (API)", null);
+      $("nota-ts").textContent = "Tarjetas alimentadas desde API Neon (/muestras). TDS = Parametro_Id 5.";
     } else if (!tsCfg().channelId) tsPintarEstado(null);
   }
   actualizar(); setInterval(actualizar, tsCfg().refrescoSegundos * 1000);
