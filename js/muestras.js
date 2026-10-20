@@ -1,7 +1,6 @@
 /* ==========================================================
-   AgroIA — datos desde la API Neon (POST/GET /muestras)
-   Parametro_Id en producción:
-     1 = humedad suelo, 2 = temp aire, 3 = hum aire, 4 = pH (legacy), 5 = TDS
+   AgroIA — datos desde la API Neon (/muestras/list)
+   Parametro_Id: 1=humSuelo, 2=temp, 3=humAire, 4=pH(legacy), 5=TDS
    ========================================================== */
 const PARAM_CLAVE = {
   1: "humSuelo",
@@ -16,35 +15,34 @@ async function apiMuestrasList() {
   return await r.json();
 }
 
-/** Normaliza lista de la API → feeds estilo ThingSpeak: [{ t:Date, v:{temp,humAire,humSuelo,tds} }] */
+/** Agrupa por MINUTO para que cada fila tenga temp+hum+tds juntos */
 function muestrasAFeeds(lista) {
   const arr = Array.isArray(lista) ? lista : [];
-  // Agrupar por minuto (o segundo) de fecha
   const porTiempo = new Map();
   for (const m of arr) {
     if (!m || m.Parametro_Id == null) continue;
     const clave = PARAM_CLAVE[m.Parametro_Id];
-    if (!clave) continue; // ignora pH (4) u otros
+    if (!clave) continue;
     const t = new Date(m.Muestra_FechaHora);
     if (isNaN(t.getTime())) continue;
-    // clave de agrupación: ISO sin ms, redondeado a segundo
-    const k = t.toISOString().slice(0, 19);
+    // minuto: YYYY-MM-DDTHH:MM
+    const k = t.toISOString().slice(0, 16);
     if (!porTiempo.has(k)) {
-      porTiempo.set(k, { t: t, v: { temp: null, humAire: null, humSuelo: null, tds: null } });
+      porTiempo.set(k, {
+        t: new Date(k + ":00.000Z"),
+        v: { temp: null, humAire: null, humSuelo: null, tds: null }
+      });
     }
     const row = porTiempo.get(k);
     const val = parseFloat(m.Muestra_Valor);
     if (isFinite(val)) row.v[clave] = val;
   }
-  const feeds = Array.from(porTiempo.values()).sort((a, b) => a.t - b.t);
-  return feeds;
+  return Array.from(porTiempo.values()).sort((a, b) => a.t - b.t);
 }
 
-/** Último valor no nulo por variable */
 function muestrasResumen(feeds) {
   const out = {};
-  const claves = ["temp", "humAire", "humSuelo", "tds"];
-  for (const c of claves) {
+  for (const c of ["temp", "humAire", "humSuelo", "tds"]) {
     const serie = (feeds || []).map(f => f.v[c]).filter(v => v !== null && v !== undefined);
     out[c] = {
       ult: serie.length ? serie[serie.length - 1] : null,
@@ -54,14 +52,10 @@ function muestrasResumen(feeds) {
       prom: serie.length ? serie.reduce((a, b) => a + b, 0) / serie.length : null
     };
   }
-  // última marca de tiempo con cualquier dato
-  let tUlt = null;
-  if (feeds && feeds.length) tUlt = feeds[feeds.length - 1].t;
-  out._tUlt = tUlt;
+  out._tUlt = (feeds && feeds.length) ? feeds[feeds.length - 1].t : null;
   return out;
 }
 
-/** Carga y cache corta (15 s) */
 let _cacheMuestras = null, _cacheAt = 0;
 async function cargarMuestras(forzar) {
   const ahora = Date.now();
@@ -74,19 +68,66 @@ async function cargarMuestras(forzar) {
   return _cacheMuestras;
 }
 
-/** Mezcla: si ThingSpeak no trae una variable, usa Neon */
 function fusionarResumen(tsR, neonR) {
   const out = {};
   for (const c of ["temp", "humAire", "humSuelo", "tds"]) {
     const a = (tsR && tsR[c]) || {};
     const b = (neonR && neonR[c]) || {};
+    // Preferir Neon si TS no trae valor (típico en TDS)
+    const ult = (a.ult != null) ? a.ult : b.ult;
     out[c] = {
-      ult: a.ult != null ? a.ult : b.ult,
-      primero: a.primero != null ? a.primero : b.primero,
-      n: (a.n || 0) + (b.n || 0),
+      ult: ult,
+      primero: (a.primero != null) ? a.primero : b.primero,
+      n: Math.max(a.n || 0, b.n || 0),
       serie: (a.serie && a.serie.length) ? a.serie : (b.serie || []),
-      prom: a.prom != null ? a.prom : b.prom
+      prom: (a.prom != null) ? a.prom : b.prom
     };
   }
+  // TDS: forzar Neon si existe (ThingSpeak field4 suele ir vacío)
+  if (neonR && neonR.tds && neonR.tds.ult != null) {
+    out.tds = Object.assign({}, out.tds, {
+      ult: neonR.tds.ult,
+      serie: neonR.tds.serie && neonR.tds.serie.length ? neonR.tds.serie : out.tds.serie,
+      prom: neonR.tds.prom != null ? neonR.tds.prom : out.tds.prom,
+      n: Math.max(out.tds.n || 0, neonR.tds.n || 0)
+    });
+  }
   return out;
+}
+
+/** Serie [{t,v}] para gráfica SVG */
+function muestrasSerie(feeds, clave) {
+  return (feeds || [])
+    .filter(f => f.v && f.v[clave] != null)
+    .map(f => ({ t: f.t, v: f.v[clave] }));
+}
+
+/** Dibuja gráfica de línea en un contenedor (reemplaza iframe vacío de ThingSpeak) */
+function neonMontarGrafico(cont, medida, feeds) {
+  if (!cont || !medida) return false;
+  const serie = muestrasSerie(feeds, medida.clave);
+  if (serie.length < 1) return false;
+  cont.innerHTML = "";
+  const wrap = document.createElement("div");
+  wrap.style.cssText = "width:100%;height:100%;min-height:180px;padding:8px 8px 4px;";
+  cont.appendChild(wrap);
+  if (typeof lineaMulti === "function") {
+    lineaMulti(wrap, {
+      series: [{
+        nombre: medida.nombre,
+        color: medida.color || "#7c3aed",
+        eje: "izq",
+        datos: serie
+      }],
+      izq: {}
+    });
+  } else {
+    // fallback texto
+    const ult = serie[serie.length - 1].v;
+    wrap.innerHTML = "<div style=\"padding:24px;text-align:center;color:#334155\">" +
+      "<div style=\"font-size:28px;font-weight:700\">" + Number(ult).toFixed(medida.dec || 0) +
+      (medida.unidad ? " " + medida.unidad : "") + "</div>" +
+      "<div style=\"opacity:.7;margin-top:6px\">" + serie.length + " puntos (API Neon)</div></div>";
+  }
+  return true;
 }
