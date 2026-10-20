@@ -1,25 +1,22 @@
-/* ==========================================================
-   AgroIA — núcleo del chat
-   1) Órdenes LED: POST /esp32/comando (ya existe en el backend)
-   2) Intenta POST {CHAT_ENDPOINT} { texto } -> { respuesta }
-   3) Si no hay /chat, responde con datos de ThingSpeak (temp, humedades, TDS)
-   ========================================================== */
+/* AgroIA — núcleo del chat (LED + /chat + ThingSpeak) */
 async function chatPreguntar(texto) {
   const q = sinAcentos(texto);
-  // --- Órdenes al ESP32 (no dependen de /chat) ---
   if (/\b(enciend|prend)/.test(q) && /\b(led|luz|esp32)\b/.test(q)) {
-    return await enviarComandoEsp32("encender_led", "Orden enviada: <b>encender LED</b>. El ESP32 la aplicará en el próximo ciclo (GET /esp32/comando).");
+    return await enviarComandoEsp32("encender_led", "Orden enviada: <b>encender LED</b>. El ESP32 la aplicará en el próximo ciclo.");
   }
   if (/\b(apag)/.test(q) && /\b(led|luz|esp32)\b/.test(q)) {
-    return await enviarComandoEsp32("apagar_led", "Orden enviada: <b>apagar LED</b>. El ESP32 la aplicará en el próximo ciclo (GET /esp32/comando).");
+    return await enviarComandoEsp32("apagar_led", "Orden enviada: <b>apagar LED</b>. El ESP32 la aplicará en el próximo ciclo.");
   }
-
   const h = { "Content-Type": "application/json" };
-  const tok = typeof obtenerToken === "function" ? obtenerToken() : null;
-  if (tok) h["Authorization"] = "Bearer " + tok;
+  try {
+    if (typeof obtenerToken === "function") {
+      const tok = obtenerToken();
+      if (tok) h["Authorization"] = "Bearer " + tok;
+    }
+  } catch (e) {}
   try {
     const ctl = new AbortController();
-    setTimeout(() => ctl.abort(), 8000);
+    setTimeout(function () { ctl.abort(); }, 8000);
     const r = await fetch(CHAT_ENDPOINT, { method: "POST", headers: h, body: JSON.stringify({ texto: texto }), signal: ctl.signal });
     if (r.ok) {
       const d = await r.json();
@@ -27,7 +24,7 @@ async function chatPreguntar(texto) {
         return { html: d.respuesta || d.message || d.detail, nota: "" };
       }
     }
-  } catch (e) { /* servidor sin /chat: respuesta local */ }
+  } catch (e) {}
   return await respuestaLocal(texto);
 }
 
@@ -44,58 +41,59 @@ async function enviarComandoEsp32(accion, mensajeOk) {
     if (d.ok === false) return { html: "No se pudo fijar la orden: " + (d.detalle || "error"), nota: "" };
     return { html: mensajeOk, nota: "" };
   } catch (e) {
-    return { html: "No pude contactar <b>/esp32/comando</b> (" + e.message + "). Revisa que la API esté en línea.", nota: "" };
+    return { html: "No pude contactar <b>/esp32/comando</b> (" + e.message + ").", nota: "" };
   }
 }
 
 async function respuestaLocal(texto) {
-  const q = sinAcentos(texto), NOTA = "Respuesta con datos de ThingSpeak (sin IA de servidor).";
-  const quiere = re => re.test(q);
-  if (quiere(/\b(hola|buenas|buenos|saludos)\b/))
-    return { html: "Hola, soy AgroIA. Puedes preguntarme por temperatura, humedad del aire, humedad del suelo, TDS o el estado general. También: «enciende el LED» / «apaga el LED».", nota: "" };
-
-  let feeds = [];
+  const q = sinAcentos(texto);
+  const NOTA = "Respuesta con datos de ThingSpeak.";
+  if (/\b(hola|buenas|buenos|saludos)\b/.test(q)) {
+    return { html: "Hola, soy AgroIA. Pregúntame por temperatura, humedad del aire, humedad del suelo, TDS o el estado general. También: «enciende el LED» / «apaga el LED».", nota: "" };
+  }
+  var feeds = [];
   try {
-    const res = await tsFeeds({ results: 5 });
-    feeds = res.feeds || [];
-  } catch (e) { /* sin TS */ }
-  const ult = feeds[0] && feeds[0].v ? feeds[0].v : {};
-  const ant = feeds[0] && feeds[0].t ? " (última lectura: " + fmtFechaHora(feeds[0].t) + ")" : "";
-
-  const frase = (clave, etiqueta) => {
-    const v = ult[clave];
-    if (v === null || v === undefined) return "No hay dato reciente de " + etiqueta + " en ThingSpeak.";
-    const m = tsMedida(clave);
+    var res = await tsFeeds({ results: 5 });
+    feeds = (res && res.feeds) ? res.feeds : [];
+  } catch (e) {}
+  var ult = (feeds[0] && feeds[0].v) ? feeds[0].v : {};
+  // preferir el feed más reciente por fecha
+  if (feeds.length) {
+    var best = feeds[0];
+    for (var i = 1; i < feeds.length; i++) {
+      if (feeds[i].t && best.t && feeds[i].t > best.t) best = feeds[i];
+    }
+    ult = best.v || {};
+  }
+  function frase(clave, etiqueta) {
+    var m = tsMedida(clave);
+    var v = ult[clave];
+    if (v === null || v === undefined) return "No hay dato reciente de " + etiqueta + ".";
     return etiqueta + ": <b>" + fmtVal(m, v) + "</b>";
-  };
-
-  if (quiere(/\btemp|calor|frio|grados\b/)) return { html: frase("temp", "Temperatura del aire") + ant, nota: NOTA };
-  if (quiere(/\bhumedad del aire|humedad aire\b/) || (quiere(/\bhumedad\b/) && quiere(/\baire\b/)))
-    return { html: frase("humAire", "Humedad del aire") + ant, nota: NOTA };
-  if (quiere(/\bhumedad del suelo|humedad suelo|suelo\b/) && !quiere(/\btds\b/))
-    return { html: frase("humSuelo", "Humedad del suelo") + ant, nota: NOTA };
-  if (quiere(/\btds\b|conductividad|solidos disueltos|ppm\b/) || quiere(/\bph\b/))
-    return { html: frase("tds", "TDS") + ant + (quiere(/\bph\b/) ? " <i>(El proyecto usa TDS en lugar de pH.)</i>" : ""), nota: NOTA };
-  if (quiere(/\bestado|resumen|como esta|general\b/)) {
+  }
+  if (/\btemp|calor|frio|grados\b/.test(q)) return { html: frase("temp", "Temperatura del aire"), nota: NOTA };
+  if (/\bhumedad del aire|humedad aire\b/.test(q) || (/\bhumedad\b/.test(q) && /\baire\b/.test(q)))
+    return { html: frase("humAire", "Humedad del aire"), nota: NOTA };
+  if (/\bhumedad del suelo|humedad suelo\b/.test(q) || (/\bhumedad\b/.test(q) && /\bsuelo\b/.test(q)))
+    return { html: frase("humSuelo", "Humedad del suelo"), nota: NOTA };
+  if (/\btds\b|conductividad|solidos|ppm\b|\bph\b/.test(q))
+    return { html: frase("tds", "TDS") + (/\bph\b/.test(q) ? " <i>(El proyecto usa TDS en lugar de pH.)</i>" : ""), nota: NOTA };
+  if (/\bestado|resumen|como esta|general\b/.test(q)) {
     return {
-      html: "Estado reciente — temp <b>" + fmtVal(tsMedida("temp"), ult.temp) + "</b>, hum. aire <b>" +
+      html: "Estado — temp <b>" + fmtVal(tsMedida("temp"), ult.temp) + "</b>, hum. aire <b>" +
         fmtVal(tsMedida("humAire"), ult.humAire) + "</b>, hum. suelo <b>" + fmtVal(tsMedida("humSuelo"), ult.humSuelo) +
-        "</b>, TDS <b>" + fmtVal(tsMedida("tds"), ult.tds) + "</b>." + ant,
+        "</b>, TDS <b>" + fmtVal(tsMedida("tds"), ult.tds) + "</b>.",
       nota: NOTA
     };
   }
-  if (quiere(/\b(led|esp32|comando)\b/))
-    return { html: "Para el LED escribe <b>enciende el LED</b> o <b>apaga el LED</b>. Se envía a /esp32/comando.", nota: "" };
-
-  return { html: "Puedo informar temperatura, humedad del aire, humedad del suelo, TDS o el estado general. También control del LED del ESP32.", nota: "" };
-}
-
-function sinAcentos(s) {
-  return String(s || "").toLowerCase().normalize("NFD").replace(/\p{M}/gu, "");
+  if (/\b(led|esp32|comando)\b/.test(q))
+    return { html: "Escribe <b>enciende el LED</b> o <b>apaga el LED</b>.", nota: "" };
+  return { html: "Puedo informar temperatura, humedades, TDS o controlar el LED del ESP32.", nota: "" };
 }
 
 function chatBurbuja(log, tipo, html, nota) {
-  const d = document.createElement("div");
+  if (!log) return null;
+  var d = document.createElement("div");
   d.className = "chat-burbuja " + (tipo === "yo" ? "yo" : "ia");
   d.innerHTML = html + (nota ? "<div class=\"chat-nota\">" + nota + "</div>" : "");
   log.appendChild(d);
@@ -104,26 +102,31 @@ function chatBurbuja(log, tipo, html, nota) {
 }
 
 function chatConectar(o) {
-  const log = $(o.log), campo = $(o.campo), boton = $(o.boton);
+  var log = typeof o.log === "string" ? $(o.log) : o.log;
+  var campo = typeof o.campo === "string" ? $(o.campo) : o.campo;
+  var boton = typeof o.boton === "string" ? $(o.boton) : o.boton;
+  if (!log || !campo || !boton) return function () {};
   async function enviar() {
-    const t = (campo.value || "").trim();
+    var t = (campo.value || "").trim();
     if (!t) return;
     campo.value = "";
-    chatBurbuja(log, "yo", t.replace(/</g, "&lt;"));
+    chatBurbuja(log, "yo", (typeof soloTexto === "function" ? soloTexto(t) : t.replace(/</g, "&lt;")));
     boton.disabled = true;
-    const pensando = chatBurbuja(log, "ia", "Pensando...");
+    var pensando = chatBurbuja(log, "ia", "Pensando...");
     try {
-      const r = await chatPreguntar(t);
-      pensando.remove();
+      var r = await chatPreguntar(t);
+      if (pensando) pensando.remove();
       chatBurbuja(log, "ia", r.html, r.nota);
     } catch (e) {
-      pensando.remove();
-      chatBurbuja(log, "ia", "No pude procesar el mensaje. Intenta de nuevo.");
+      if (pensando) pensando.remove();
+      chatBurbuja(log, "ia", "No pude procesar el mensaje.");
     }
     boton.disabled = false;
-    campo.focus({ preventScroll: true });
+    try { campo.focus({ preventScroll: true }); } catch (e) { campo.focus(); }
   }
   boton.onclick = enviar;
-  campo.addEventListener("keydown", e => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); enviar(); } });
+  campo.addEventListener("keydown", function (e) {
+    if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); enviar(); }
+  });
   return enviar;
 }

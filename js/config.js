@@ -35,7 +35,7 @@ const THINGSPEAK = {
   apiBase: "https://api.thingspeak.com",
   resultados: 60,          // lecturas recientes que se usan para las tarjetas
   refrescoSegundos: 15,    // cada cuánto se vuelven a pedir los datos
-  minutosEnLinea: 5        // si la última lectura es más vieja, se marca "sin datos recientes"
+  minutosEnLinea: 240        // si la última lectura es más vieja, se marca "sin datos recientes"
 };
 
 // Chat: POST { texto } -> { respuesta }. Órdenes LED también vía POST /esp32/comando.
