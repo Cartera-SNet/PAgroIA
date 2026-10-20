@@ -2,7 +2,7 @@
    AgroIA - Piezas de interfaz compartidas por las pantallas nuevas
    ========================================================== */
 function iconoMedida(m) {
-  return '<div class="kpi-ico ' + m.clase + '">' + (m.icono ? ico(m.icono) : '<span class="ph-txt">pH</span>') + '</div>';
+  return '<div class="kpi-ico ' + m.clase + '">' + (m.icono ? ico(m.icono) : '<span class="ph-txt">TDS</span>') + '</div>';
 }
 
 /* Tarjeta de una medición. opts.delta = true agrega la variación (↑ 0.8 °C) */

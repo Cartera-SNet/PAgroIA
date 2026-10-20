@@ -7,8 +7,8 @@ montarLayout({ nuevo: true, estadoPropio: true });
 
 (function () {
   "use strict";
-  const CAMPOS_P = ["temp", "humAire", "humSuelo", "ph"];
-  const LIM = { temp: [-10, 60], humAire: [0, 100], humSuelo: [0, 100], ph: [0, 14] };
+  const CAMPOS_P = ["temp", "humAire", "humSuelo", "tds"];
+  const LIM = { temp: [-10, 60], humAire: [0, 100], humSuelo: [0, 100], tds: [0, 5000] };
   $("ultima").innerHTML = ico("i-refresh") + "Usar la última lectura de ThingSpeak";
 
   function leerForm() {
@@ -41,10 +41,10 @@ montarLayout({ nuevo: true, estadoPropio: true });
     rec.push(hs === "normal" ? "Mantener la humedad del suelo entre " + r1[0] + "% y " + r1[1] + "%."
       : hs === "bajo" ? "Aumentar el riego: la humedad del suelo está por debajo de " + r1[0] + "%."
       : "Reducir el riego o mejorar el drenaje: la humedad del suelo supera " + r1[1] + "%.");
-    const ph = tsEvaluar("ph", v.ph), r2 = R("ph");
-    rec.push(ph === "normal" ? "Mantener el pH en un rango de " + r2[0] + " - " + r2[1] + "."
-      : ph === "bajo" ? "Subir el pH (por ejemplo con encalado) hasta un rango de " + r2[0] + " - " + r2[1] + "."
-      : "Bajar el pH (por ejemplo con enmiendas ácidas) hasta un rango de " + r2[0] + " - " + r2[1] + ".");
+    const td = tsEvaluar("tds", v.tds), r2 = R("tds");
+    rec.push(td === "normal" ? "Mantener el TDS en un rango de " + r2[0] + " - " + r2[1] + " ppm."
+      : td === "bajo" ? "El TDS está bajo (" + r2[0] + " - " + r2[1] + " ppm recomendado)."
+      : "El TDS está alto; revisar riego y fertilización (rango " + r2[0] + " - " + r2[1] + " ppm).");
     const t = tsEvaluar("temp", v.temp), r3 = R("temp");
     if (t === "alto") rec.push("Temperatura alta (más de " + r3[1] + " °C): considerar sombra o cobertura del suelo.");
     if (t === "bajo") rec.push("Temperatura baja (menos de " + r3[0] + " °C): considerar protección del cultivo.");
@@ -57,7 +57,7 @@ montarLayout({ nuevo: true, estadoPropio: true });
 
   async function clasificarConModelo(v) {
     const r = await fetch(CLASIFICADOR.url, { method: "POST", headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ temperatura: v.temp, humedad_aire: v.humAire, humedad_suelo: v.humSuelo, ph: v.ph }) });
+      body: JSON.stringify({ temperatura: v.temp, humedad_aire: v.humAire, humedad_suelo: v.humSuelo, tds: v.tds }) });
     if (!r.ok) throw new Error("HTTP " + r.status);
     const d = await r.json();
     let conf = Number(d.confianza); if (!isFinite(conf)) conf = null; else if (conf <= 1) conf = conf * 100;

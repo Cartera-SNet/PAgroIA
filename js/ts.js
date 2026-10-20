@@ -20,7 +20,7 @@ const TS_MEDIDAS = [
   { clave: "temp",     nombre: "Temperatura del aire", unidad: "°C", dec: 1, rango: "temp_aire",     color: "#ef4444", tipo: "line",   icono: "i-therm",  clase: "t-rojo" },
   { clave: "humAire",  nombre: "Humedad del aire",     unidad: "%",  dec: 0, rango: "humedad_aire",  color: "#3b82f6", tipo: "column", icono: "i-drop",   clase: "t-azul" },
   { clave: "humSuelo", nombre: "Humedad del suelo",    unidad: "%",  dec: 0, rango: "humedad_suelo", color: "#16a34a", tipo: "line",   icono: "i-sprout", clase: "t-verde" },
-  { clave: "ph",       nombre: "pH del suelo",         unidad: "",   dec: 1, rango: "ph",            color: "#8b5cf6", tipo: "line",   icono: null,       clase: "t-morado" }
+  { clave: "tds",      nombre: "TDS (sólidos disueltos)", unidad: "ppm", dec: 0, rango: "tds",       color: "#8b5cf6", tipo: "line",   icono: null,       clase: "t-morado" }
 ];
 const tsMedida = clave => TS_MEDIDAS.find(m => m.clave === clave);
 
@@ -37,7 +37,7 @@ const fmtFecha = d => dos(d.getDate()) + "/" + dos(d.getMonth() + 1) + "/" + d.g
 const fmtFechaHora = d => fmtFecha(d) + " " + dos(d.getHours()) + ":" + dos(d.getMinutes());
 const fmtISO = d => d.getFullYear() + "-" + dos(d.getMonth() + 1) + "-" + dos(d.getDate());
 
-/* Lee datos del canal. op: { results, start, end, average }  -> { canal, feeds:[{t:Date, v:{temp,humAire,humSuelo,ph}}] }
+/* Lee datos del canal. op: { results, start, end, average }  -> { canal, feeds:[{t:Date, v:{temp,humAire,humSuelo,tds}}] }
    Devuelve null si no hay canal configurado. */
 async function tsFeeds(op) {
   op = op || {};
@@ -56,7 +56,7 @@ async function tsFeeds(op) {
     t: new Date(f.created_at),
     v: {
       temp: tsNum(f["field" + c.campos.temp]), humAire: tsNum(f["field" + c.campos.humAire]),
-      humSuelo: tsNum(f["field" + c.campos.humSuelo]), ph: tsNum(f["field" + c.campos.ph])
+      humSuelo: tsNum(f["field" + c.campos.humSuelo]), tds: tsNum(f["field" + c.campos.tds])
     }
   }));
   return { canal: j.channel || {}, feeds: feeds };
@@ -91,7 +91,7 @@ function tsChartUrl(m, o) {
   if (manual) return manual;
   const p = new URLSearchParams({
     bgcolor: "#ffffff", color: m.color, dynamic: "true", results: String(o.results || c.resultados || 60),
-    type: o.tipo || m.tipo, update: String(c.refrescoSegundos), xaxis: "Hora", yaxis: m.unidad || "pH", title: " "
+    type: o.tipo || m.tipo, update: String(c.refrescoSegundos), xaxis: "Hora", yaxis: m.unidad || "ppm", title: " "
   });
   return "https://thingspeak.com/channels/" + c.channelId + "/charts/" + c.campos[m.clave] + "?" + p.toString();
 }

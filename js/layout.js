@@ -22,7 +22,7 @@ const SUBNAV = {
   config:     [["General", "configuracion.html"]]
 };
 const ATAJOS = [
-  [/inicio|home|panel/, "dashboard.html"], [/temp|humedad|ph\b|tiempo real|monitor/, "pages/monitoreo.html"],
+  [/inicio|home|panel/, "dashboard.html"], [/temp|humedad|tds|ph\b|tiempo real|monitor/, "pages/monitoreo.html"],
   [/hist|fecha|muestra|dato|csv/, "pages/historial.html"], [/alert/, "pages/alertas.html"],
   [/predic|fertil|clasif/, "pages/prediccion.html"], [/imagen|yolo|camara|cámara/, "pages/vision.html"],
   [/chat|mensaje|comando/, "pages/chat.html"], [/config|iot|esp|teclado|intervalo|canal/, "pages/configuracion.html"]

@@ -1,5 +1,5 @@
 /* ==========================================================
-   AgroIA - Historial de datos (datos reales de ThingSpeak)
+   AgroIA - Historial de datos (fuente: ThingSpeak canal público, NO la tabla muestras de Neon)
    Rango de fechas + parámetro + intervalo (promedio), gráfico con doble eje, tabla paginada y CSV.
    ========================================================== */
 montarLayout({ nuevo: true, estadoPropio: true, buscador: "Buscar por fecha, parámetro o tipo de dato..." });
@@ -19,17 +19,17 @@ montarLayout({ nuevo: true, estadoPropio: true, buscador: "Buscar por fecha, par
   $("fr-reset").innerHTML = ico("i-refresh");
   $("sabias").querySelector("h3").insertAdjacentHTML("afterbegin", ico("i-bulb"));
   $("sabias").insertAdjacentHTML("beforeend", ico("i-sprout", "deco"));
-  const ICO_COL = { temp: ["i-therm", "c-rojo"], humAire: ["i-drop", "c-azul"], humSuelo: ["i-sprout", "c-verde"], ph: [null, "c-morado"] };
+  const ICO_COL = { temp: ["i-therm", "c-rojo"], humAire: ["i-drop", "c-azul"], humSuelo: ["i-sprout", "c-verde"], tds: [null, "c-morado"] };
   TS_MEDIDAS.forEach(m => {
-    $("th-" + m.clave).innerHTML = (m.icono ? ico(m.icono, ICO_COL[m.clave][1]) : '<b class="c-morado" style="font-size:11px;margin-right:6px">pH</b>') +
-      (m.clave === "ph" ? "pH del suelo" : m.nombre.replace(" del ", " ").replace("Temperatura aire", "Temperatura") + " (" + m.unidad + ")");
+    $("th-" + m.clave).innerHTML = (m.icono ? ico(m.icono, ICO_COL[m.clave][1]) : '<b class="c-morado" style="font-size:11px;margin-right:6px">TDS</b>') +
+      (m.clave === "tds" ? "TDS (ppm)" : m.nombre.replace(" del ", " ").replace("Temperatura aire", "Temperatura") + " (" + m.unidad + ")");
   });
   $("th-temp").lastChild.textContent = "Temperatura (°C)";
   $("th-humAire").lastChild.textContent = "Humedad aire (%)";
   $("th-humSuelo").lastChild.textContent = "Humedad suelo (%)";
 
   // ---- tarjetas de promedio (con color suave)
-  const TINTE = { temp: "tint-rojo", humAire: "tint-azul", humSuelo: "tint-verde", ph: "tint-morado" };
+  const TINTE = { temp: "tint-rojo", humAire: "tint-azul", humSuelo: "tint-verde", tds: "tint-morado" };
   $("kpis").innerHTML = TS_MEDIDAS.map(m =>
     '<article class="kpi ' + TINTE[m.clave] + '" id="hk-' + m.clave + '">' + iconoMedida(m) +
     '<div class="kpi-info"><span class="kpi-lab">' + m.nombre + '</span><b class="kpi-val" data-v>—</b><span class="kpi-sub">Promedio en el período</span></div>' +
@@ -40,7 +40,7 @@ montarLayout({ nuevo: true, estadoPropio: true, buscador: "Buscar por fecha, par
   function pintarRapidos() {
     $("fr-lista").innerHTML = RAP.map(([k, t, i, c]) =>
       '<button class="fr-item' + (param === k ? " on" : "") + '" data-k="' + k + '"><span class="fr-ico" style="background:' + c + '">' +
-      (i ? ico(i) : '<span class="ph-txt">pH</span>') + '</span>' + t + ico("i-chev-r") + '</button>').join("");
+      (i ? ico(i) : '<span class="ph-txt">TDS</span>') + '</span>' + t + ico("i-chev-r") + '</button>').join("");
     $("fr-lista").querySelectorAll(".fr-item").forEach(b => b.onclick = () => fijarParam(b.dataset.k));
   }
   function fijarParam(k) {
@@ -90,12 +90,12 @@ montarLayout({ nuevo: true, estadoPropio: true, buscador: "Buscar por fecha, par
 
   function pintarGrafico() {
     const sel = param === "todos" ? TS_MEDIDAS : [tsMedida(param)];
-    $("leyenda").innerHTML = sel.map(m => '<span><i style="background:' + m.color + '"></i>' + m.nombre.replace("Temperatura del aire", "Temperatura") .replace("Humedad del aire", "Humedad aire").replace("Humedad del suelo", "Humedad suelo").replace("pH del suelo", "pH") + (m.unidad ? " (" + m.unidad + ")" : "") + '</span>').join("");
+    $("leyenda").innerHTML = sel.map(m => '<span><i style="background:' + m.color + '"></i>' + m.nombre.replace("Temperatura del aire", "Temperatura") .replace("Humedad del aire", "Humedad aire").replace("Humedad del suelo", "Humedad suelo").replace("TDS (sólidos disueltos)", "TDS") + (m.unidad ? " (" + m.unidad + ")" : "") + '</span>').join("");
     if (!datos.length) { $("evo").innerHTML = '<div class="graf-aviso">No hay datos en el período elegido.</div>'; return; }
-    const series = sel.map(m => ({ nombre: m.nombre, color: m.color, eje: m.clave === "ph" ? "der" : "izq", datos: datos.map(f => ({ t: f.t, v: f.v[m.clave] })) }));
+    const series = sel.map(m => ({ nombre: m.nombre, color: m.color, eje: m.clave === "tds" ? "der" : "izq", datos: datos.map(f => ({ t: f.t, v: f.v[m.clave] })) }));
     // si se muestra solo un parámetro el eje izquierdo se ajusta a sus valores
     const op = { series: series };
-    if (param === "ph") { op.izq = { min: 0, max: 14 }; series[0].eje = "izq"; }
+    if (param === "tds") { op.izq = { min: 0, max: 1500 }; series[0].eje = "izq"; }
     lineaMulti($("evo"), op);
   }
 
@@ -109,7 +109,7 @@ montarLayout({ nuevo: true, estadoPropio: true, buscador: "Buscar por fecha, par
   }
   function celda(m, v) {
     const [i, c] = ICO_COL[m.clave], est = tsEvaluar(m.clave, v), fuera = est === "bajo" || est === "alto";
-    return '<td' + (fuera ? ' class="fuera" title="Fuera del rango normal (' + est + ')"' : '') + '>' + (i ? ico(i, c) : '<b class="' + c + '" style="font-size:10px;margin-right:6px">pH</b>') + fmtNum(v, m.dec) + '</td>';
+    return '<td' + (fuera ? ' class="fuera" title="Fuera del rango normal (' + est + ')"' : '') + '>' + (i ? ico(i, c) : '<b class="' + c + '" style="font-size:10px;margin-right:6px">TDS</b>') + fmtNum(v, m.dec) + '</td>';
   }
   function pintarTabla() {
     const f = filas(), total = f.length, pags = Math.max(1, Math.ceil(total / PP));
@@ -144,7 +144,7 @@ montarLayout({ nuevo: true, estadoPropio: true, buscador: "Buscar por fecha, par
   function descargarCSV() {
     const f = filas().slice().reverse();
     if (!f.length) return avisarToast("No hay datos para descargar.");
-    const lin = ["fecha_hora,temperatura_c,humedad_aire_pct,humedad_suelo_pct,ph"].concat(f.map(x =>
+    const lin = ["fecha_hora,temperatura_c,humedad_aire_pct,humedad_suelo_pct,tds_ppm"].concat(f.map(x =>
       [fmtISO(x.t) + " " + dos(x.t.getHours()) + ":" + dos(x.t.getMinutes()) + ":" + dos(x.t.getSeconds())].concat(TS_MEDIDAS.map(m => x.v[m.clave] === null ? "" : x.v[m.clave])).join(",")));
     const blob = new Blob(["\ufeff" + lin.join("\r\n")], { type: "text/csv;charset=utf-8" });
     const a = document.createElement("a"); a.href = URL.createObjectURL(blob);
@@ -156,7 +156,7 @@ montarLayout({ nuevo: true, estadoPropio: true, buscador: "Buscar por fecha, par
   // ---- buscador de la barra superior
   window.alBuscar = q => {
     const s = sinAcentos(q);
-    const porNombre = s.length >= 3 && [["temp", /^temp/], ["humAire", /^humedad (del )?aire|^aire/], ["humSuelo", /^humedad (del )?suelo|^suelo/], ["ph", /^ph/]].find(([, re]) => re.test(s));
+    const porNombre = s.length >= 3 && [["temp", /^temp/], ["humAire", /^humedad (del )?aire|^aire/], ["humSuelo", /^humedad (del )?suelo|^suelo/], ["tds", /^tds|ppm/]].find(([, re]) => re.test(s));
     if (porNombre) { texto = ""; fijarParam(porNombre[0]); return; }
     texto = q; pagina = 1; if (cargado) pintarTabla();
   };
