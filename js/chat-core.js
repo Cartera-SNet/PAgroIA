@@ -1,12 +1,21 @@
-/* AgroIA — núcleo del chat (LED + /chat + ThingSpeak) */
+/* AgroIA — chat: LED vía /esp32/comando, sensores vía ThingSpeak, resto vía /chat o local */
 async function chatPreguntar(texto) {
-  const q = sinAcentos(texto);
+  const q = sinAcentos(texto || "");
+
+  // 1) Órdenes LED → API ESP32
   if (/\b(enciend|prend)/.test(q) && /\b(led|luz|esp32)\b/.test(q)) {
-    return await enviarComandoEsp32("encender_led", "Orden enviada: <b>encender LED</b>. El ESP32 la aplicará en el próximo ciclo.");
+    return await enviarComandoEsp32("encender_led", "Orden enviada: <b>encender LED</b>. El ESP32 la aplicará en el próximo ciclo (GET /esp32/comando).");
   }
   if (/\b(apag)/.test(q) && /\b(led|luz|esp32)\b/.test(q)) {
-    return await enviarComandoEsp32("apagar_led", "Orden enviada: <b>apagar LED</b>. El ESP32 la aplicará en el próximo ciclo.");
+    return await enviarComandoEsp32("apagar_led", "Orden enviada: <b>apagar LED</b>. El ESP32 la aplicará en el próximo ciclo (GET /esp32/comando).");
   }
+
+  // 2) Preguntas de sensores / estado → ThingSpeak (datos reales del canal)
+  if (esPreguntaSensores(q)) {
+    return await respuestaLocal(texto);
+  }
+
+  // 3) Resto: intentar /chat del backend; si no aporta, ThingSpeak/local
   const h = { "Content-Type": "application/json" };
   try {
     if (typeof obtenerToken === "function") {
@@ -20,12 +29,24 @@ async function chatPreguntar(texto) {
     const r = await fetch(CHAT_ENDPOINT, { method: "POST", headers: h, body: JSON.stringify({ texto: texto }), signal: ctl.signal });
     if (r.ok) {
       const d = await r.json();
-      if (d.respuesta || d.message || d.detail) {
-        return { html: d.respuesta || d.message || d.detail, nota: "" };
+      const msg = d.respuesta || d.message || d.detail || "";
+      // Ignorar respuesta genérica solo-LED del backend
+      if (msg && !/solo|menu\/\*|Monitoreo\/Historial/i.test(msg) && !/^Puedo enviar órdenes al ESP32/i.test(msg)) {
+        return { html: msg, nota: "" };
       }
     }
   } catch (e) {}
   return await respuestaLocal(texto);
+}
+
+function esPreguntaSensores(q) {
+  return (
+    /\btemp|calor|frio|grados\b/.test(q) ||
+    /\bhumedad\b/.test(q) ||
+    /\btds\b|\bph\b|conductividad|solidos|ppm\b/.test(q) ||
+    /\bestado|resumen|como esta|general|cultivo\b/.test(q) ||
+    /\bhola|buenas|buenos|saludos\b/.test(q)
+  );
 }
 
 async function enviarComandoEsp32(accion, mensajeOk) {
@@ -46,49 +67,68 @@ async function enviarComandoEsp32(accion, mensajeOk) {
 }
 
 async function respuestaLocal(texto) {
-  const q = sinAcentos(texto);
-  const NOTA = "Respuesta con datos de ThingSpeak.";
+  const q = sinAcentos(texto || "");
+  const NOTA = "Datos en vivo del canal ThingSpeak.";
   if (/\b(hola|buenas|buenos|saludos)\b/.test(q)) {
-    return { html: "Hola, soy AgroIA. Pregúntame por temperatura, humedad del aire, humedad del suelo, TDS o el estado general. También: «enciende el LED» / «apaga el LED».", nota: "" };
+    return {
+      html: "Hola, soy AgroIA. Puedo decirte la <b>temperatura</b>, <b>humedad del aire</b>, <b>humedad del suelo</b>, <b>TDS</b> o el <b>estado general</b>. También: «enciende el LED» / «apaga el LED».",
+      nota: ""
+    };
   }
+
   var feeds = [];
   try {
-    var res = await tsFeeds({ results: 5 });
+    var res = await tsFeeds({ results: 10 });
     feeds = (res && res.feeds) ? res.feeds : [];
   } catch (e) {}
-  var ult = (feeds[0] && feeds[0].v) ? feeds[0].v : {};
-  // preferir el feed más reciente por fecha
+
+  var ult = {};
+  var cuando = null;
   if (feeds.length) {
     var best = feeds[0];
     for (var i = 1; i < feeds.length; i++) {
       if (feeds[i].t && best.t && feeds[i].t > best.t) best = feeds[i];
     }
     ult = best.v || {};
+    cuando = best.t;
   }
+
   function frase(clave, etiqueta) {
     var m = tsMedida(clave);
     var v = ult[clave];
-    if (v === null || v === undefined) return "No hay dato reciente de " + etiqueta + ".";
+    if (v === null || v === undefined) {
+      if (clave === "tds") {
+        return "Aún no hay lecturas de <b>TDS</b> en ThingSpeak (field 4 vacío). Cuando el ESP32 envíe TDS, aparecerá aquí.";
+      }
+      return "No hay dato reciente de " + etiqueta + " en ThingSpeak.";
+    }
     return etiqueta + ": <b>" + fmtVal(m, v) + "</b>";
   }
-  if (/\btemp|calor|frio|grados\b/.test(q)) return { html: frase("temp", "Temperatura del aire"), nota: NOTA };
-  if (/\bhumedad del aire|humedad aire\b/.test(q) || (/\bhumedad\b/.test(q) && /\baire\b/.test(q)))
-    return { html: frase("humAire", "Humedad del aire"), nota: NOTA };
+
+  var extra = cuando ? " <span style=\"opacity:.7\">(últ. " + fmtFechaHora(cuando) + ")</span>" : "";
+
+  if (/\btemp|calor|frio|grados\b/.test(q)) return { html: frase("temp", "Temperatura del aire") + extra, nota: NOTA };
+  if (/\bhumedad del aire|humedad aire\b/.test(q) || (/\bhumedad\b/.test(q) && /\baire\b/.test(q) && !/\bsuelo\b/.test(q)))
+    return { html: frase("humAire", "Humedad del aire") + extra, nota: NOTA };
   if (/\bhumedad del suelo|humedad suelo\b/.test(q) || (/\bhumedad\b/.test(q) && /\bsuelo\b/.test(q)))
-    return { html: frase("humSuelo", "Humedad del suelo"), nota: NOTA };
+    return { html: frase("humSuelo", "Humedad del suelo") + extra, nota: NOTA };
   if (/\btds\b|conductividad|solidos|ppm\b|\bph\b/.test(q))
-    return { html: frase("tds", "TDS") + (/\bph\b/.test(q) ? " <i>(El proyecto usa TDS en lugar de pH.)</i>" : ""), nota: NOTA };
-  if (/\bestado|resumen|como esta|general\b/.test(q)) {
+    return { html: frase("tds", "TDS") + (/\bph\b/.test(q) ? " <i>(El proyecto usa TDS en lugar de pH.)</i>" : "") + extra, nota: NOTA };
+  if (/\bestado|resumen|como esta|general|cultivo\b/.test(q)) {
     return {
-      html: "Estado — temp <b>" + fmtVal(tsMedida("temp"), ult.temp) + "</b>, hum. aire <b>" +
+      html: "Estado del cultivo — temp <b>" + fmtVal(tsMedida("temp"), ult.temp) + "</b>, hum. aire <b>" +
         fmtVal(tsMedida("humAire"), ult.humAire) + "</b>, hum. suelo <b>" + fmtVal(tsMedida("humSuelo"), ult.humSuelo) +
-        "</b>, TDS <b>" + fmtVal(tsMedida("tds"), ult.tds) + "</b>.",
+        "</b>, TDS <b>" + fmtVal(tsMedida("tds"), ult.tds) + "</b>." + extra,
       nota: NOTA
     };
   }
   if (/\b(led|esp32|comando)\b/.test(q))
     return { html: "Escribe <b>enciende el LED</b> o <b>apaga el LED</b>.", nota: "" };
-  return { html: "Puedo informar temperatura, humedades, TDS o controlar el LED del ESP32.", nota: "" };
+
+  return {
+    html: "Puedo informar <b>temperatura</b>, <b>humedades</b>, <b>TDS</b>, el <b>estado general</b> o controlar el <b>LED</b> del ESP32.",
+    nota: ""
+  };
 }
 
 function chatBurbuja(log, tipo, html, nota) {
@@ -110,7 +150,7 @@ function chatConectar(o) {
     var t = (campo.value || "").trim();
     if (!t) return;
     campo.value = "";
-    chatBurbuja(log, "yo", (typeof soloTexto === "function" ? soloTexto(t) : t.replace(/</g, "&lt;")));
+    chatBurbuja(log, "yo", (typeof soloTexto === "function" ? soloTexto(t) : String(t).replace(/</g, "&lt;")));
     boton.disabled = true;
     var pensando = chatBurbuja(log, "ia", "Pensando...");
     try {
