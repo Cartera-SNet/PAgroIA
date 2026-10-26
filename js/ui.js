@@ -2,7 +2,7 @@
    AgroIA - Piezas de interfaz compartidas por las pantallas nuevas
    ========================================================== */
 function iconoMedida(m) {
-  return '<div class="kpi-ico ' + m.clase + '">' + (m.icono ? ico(m.icono) : '<span class="ph-txt">TDS</span>') + '</div>';
+  return '<div class="kpi-ico ' + m.clase + '">' + (m.icono ? ico(m.icono) : '<span class="ph-txt tres">' + m.etiqueta + '</span>') + '</div>';
 }
 
 /* Tarjeta de una medición. opts.delta = true agrega la variación (↑ 0.8 °C) */
@@ -27,6 +27,9 @@ function pintarKPI(m, r) {
 function nivelTexto(est) {
   return { normal: "Nivel óptimo", bajo: "Nivel bajo", alto: "Nivel alto", sin: "Sin dato" }[est];
 }
+
+/* Nombre en minúsculas para usarlo dentro de una frase (sin romper «TDS») */
+const nombreMin = m => m.clave === "tds" ? m.nombre : m.nombre.toLowerCase();
 
 /* Escapa texto y respeta saltos de línea simples */
 const soloTexto = s => esc(String(s)).replace(/\n/g, "<br>");

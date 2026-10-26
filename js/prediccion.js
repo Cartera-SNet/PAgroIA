@@ -42,9 +42,9 @@ montarLayout({ nuevo: true, estadoPropio: true });
       : hs === "bajo" ? "Aumentar el riego: la humedad del suelo está por debajo de " + r1[0] + "%."
       : "Reducir el riego o mejorar el drenaje: la humedad del suelo supera " + r1[1] + "%.");
     const td = tsEvaluar("tds", v.tds), r2 = R("tds");
-    rec.push(td === "normal" ? "Mantener el TDS en un rango de " + r2[0] + " - " + r2[1] + " ppm."
-      : td === "bajo" ? "El TDS está bajo (" + r2[0] + " - " + r2[1] + " ppm recomendado)."
-      : "El TDS está alto; revisar riego y fertilización (rango " + r2[0] + " - " + r2[1] + " ppm).");
+    rec.push(td === "normal" ? "Mantener el TDS (sales disueltas) entre " + r2[0] + " y " + r2[1] + " ppm."
+      : td === "bajo" ? "TDS bajo (menos de " + r2[0] + " ppm): hay pocos nutrientes disueltos; revisar la fertilización."
+      : "Reducir las sales disueltas (TDS por encima de " + r2[1] + " ppm): lavar el suelo con riego abundante y revisar la calidad del agua y el fertilizante.");
     const t = tsEvaluar("temp", v.temp), r3 = R("temp");
     if (t === "alto") rec.push("Temperatura alta (más de " + r3[1] + " °C): considerar sombra o cobertura del suelo.");
     if (t === "bajo") rec.push("Temperatura baja (menos de " + r3[0] + " °C): considerar protección del cultivo.");
@@ -96,16 +96,7 @@ montarLayout({ nuevo: true, estadoPropio: true });
       const res = await tsFeeds({ results: 10 }); tsPintarEstado(res);
       const R = tsResumen(res ? res.feeds : []);
       if (!res || !res.feeds.length) { $("origen-datos").textContent = "El canal todavía no tiene lecturas."; return false; }
-      CAMPOS_P.forEach(k => { if (R[k] && R[k].ult !== null) $("p-" + k).value = Number(R[k].ult).toFixed(tsMedida(k).dec); });
-      try {
-        const neon = await cargarMuestras();
-        if (neon && neon.resumen) {
-          CAMPOS_P.forEach(k => {
-            const u = neon.resumen[k] && neon.resumen[k].ult;
-            if (u != null && (!$("p-" + k).value || k === "tds")) $("p-" + k).value = Number(u).toFixed(tsMedida(k).dec);
-          });
-        }
-      } catch (e) {}
+      CAMPOS_P.forEach(k => { if (R[k].ult !== null) $("p-" + k).value = Number(R[k].ult).toFixed(tsMedida(k).dec); });
       $("origen-datos").textContent = "Valores tomados de la última lectura de ThingSpeak (" + fmtFechaHora(res.feeds[res.feeds.length - 1].t) + "). Puedes editarlos.";
       return true;
     } catch (e) { console.error(e); $("origen-datos").textContent = "No fue posible leer ThingSpeak."; if (!auto) avisarToast("No fue posible leer ThingSpeak."); return false; }

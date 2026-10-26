@@ -46,7 +46,7 @@ function lineaMulti(cont, op) {
   const mg = { l: 40, r: 42, t: 12, b: 30 }, iw = W - mg.l - mg.r, ih = H - mg.t - mg.b;
   const tmin = Math.min.apply(null, todos), tmax = Math.max.apply(null, todos), rt = (tmax - tmin) || 1;
   const izq = Object.assign({ min: 0, max: 100 }, op.izq), der = Object.assign({ min: 4, max: 8 }, op.der);
-  // el eje de TDS se amplía si hace falta
+  // el eje de pH se amplía si algún valor se sale de 4–8
   op.series.filter(s => s.eje === "der").forEach(s => s.datos.forEach(d => {
     if (d.v === null) return;
     if (d.v < der.min) der.min = Math.floor(d.v); if (d.v > der.max) der.max = Math.ceil(d.v);

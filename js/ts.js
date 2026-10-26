@@ -20,7 +20,7 @@ const TS_MEDIDAS = [
   { clave: "temp",     nombre: "Temperatura del aire", unidad: "°C", dec: 1, rango: "temp_aire",     color: "#ef4444", tipo: "line",   icono: "i-therm",  clase: "t-rojo" },
   { clave: "humAire",  nombre: "Humedad del aire",     unidad: "%",  dec: 0, rango: "humedad_aire",  color: "#3b82f6", tipo: "column", icono: "i-drop",   clase: "t-azul" },
   { clave: "humSuelo", nombre: "Humedad del suelo",    unidad: "%",  dec: 0, rango: "humedad_suelo", color: "#16a34a", tipo: "line",   icono: "i-sprout", clase: "t-verde" },
-  { clave: "tds",      nombre: "TDS (sólidos disueltos)", unidad: "ppm", dec: 0, rango: "tds",       color: "#8b5cf6", tipo: "line",   icono: null,       clase: "t-morado" }
+  { clave: "tds",      nombre: "TDS",                  unidad: "ppm", dec: 0, rango: "tds",           color: "#8b5cf6", tipo: "line",   icono: null,       clase: "t-morado", etiqueta: "TDS" }
 ];
 const tsMedida = clave => TS_MEDIDAS.find(m => m.clave === clave);
 
@@ -82,17 +82,24 @@ function tsEvaluar(clave, v) {
   return "normal";
 }
 
-/* Dirección del gráfico oficial de ThingSpeak (el mismo formato que da su código "iframe") */
+/* Dirección del gráfico oficial de ThingSpeak: el MISMO formato que da su código "iframe" (Compartir > Embed), p. ej.
+   https://thingspeak.com/channels/3540815/charts/1?bgcolor=%23ffffff&color=%23ef4444&dynamic=true&results=60&title=Temperatura+del+aire+%28%C2%B0C%29&type=line&xaxis=Hora&yaxis=%C2%B0C
+   Sin opciones: gráfico en tiempo real (dynamic=true, últimas 60 lecturas).
+   Con o.start / o.end (YYYY-MM-DD HH:MM:SS, hora de Colombia) y o.average (minutos): rango de fechas (lo usa el Historial). */
 function tsChartUrl(m, o) {
   o = o || {};
   const c = tsCfg();
   if (!c.channelId) return "";
   const manual = c.graficos && c.graficos[m.clave.toLowerCase()];
-  if (manual) return manual;
-  const p = new URLSearchParams({
-    bgcolor: "#ffffff", color: m.color, dynamic: "true", results: String(o.results || c.resultados || 60),
-    type: o.tipo || m.tipo, update: String(c.refrescoSegundos), xaxis: "Hora", yaxis: m.unidad || "ppm", title: " "
-  });
+  if (manual && !o.start) return manual;
+  const p = new URLSearchParams();
+  p.set("bgcolor", "#ffffff"); p.set("color", m.color);
+  if (o.start) {
+    p.set("dynamic", "false"); p.set("start", o.start); p.set("end", o.end); p.set("timezone", "America/Bogota");
+    if (o.average) p.set("average", String(o.average));
+  } else { p.set("dynamic", "true"); p.set("results", String(o.results || c.resultados || 60)); }
+  p.set("title", m.nombre + (m.unidad ? " (" + m.unidad + ")" : ""));
+  p.set("type", o.tipo || m.tipo); p.set("xaxis", "Hora"); p.set("yaxis", m.unidad || m.nombre);
   return "https://thingspeak.com/channels/" + c.channelId + "/charts/" + c.campos[m.clave] + "?" + p.toString();
 }
 const tsPublicUrl = () => { const c = tsCfg(); return c.channelId ? "https://thingspeak.mathworks.com/channels/" + c.channelId : ""; };

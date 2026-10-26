@@ -1,5 +1,5 @@
 /* ==========================================================
-   AgroIA - Historial: prioriza API Neon (/muestras, TDS=Parametro_Id 5); respaldo ThingSpeak
+   AgroIA - Historial de datos (datos reales de ThingSpeak)
    Rango de fechas + parámetro + intervalo (promedio), gráfico con doble eje, tabla paginada y CSV.
    ========================================================== */
 montarLayout({ nuevo: true, estadoPropio: true, buscador: "Buscar por fecha, parámetro o tipo de dato..." });
@@ -7,7 +7,7 @@ montarLayout({ nuevo: true, estadoPropio: true, buscador: "Buscar por fecha, par
 (function () {
   "use strict";
   let PP = 10;                                    // registros por página (se cambia en la tabla)
-  let datos = [], param = "todos", pagina = 1, texto = "", cargado = false;
+  let datos = [], param = "todos", pagina = 1, texto = "", cargado = false, rango = null;
 
   // ---- íconos de las piezas estáticas
   $("h-ico").innerHTML = ico("i-cal"); $("h-bb").innerHTML = ico("i-sprout");
@@ -21,8 +21,8 @@ montarLayout({ nuevo: true, estadoPropio: true, buscador: "Buscar por fecha, par
   $("sabias").insertAdjacentHTML("beforeend", ico("i-sprout", "deco"));
   const ICO_COL = { temp: ["i-therm", "c-rojo"], humAire: ["i-drop", "c-azul"], humSuelo: ["i-sprout", "c-verde"], tds: [null, "c-morado"] };
   TS_MEDIDAS.forEach(m => {
-    $("th-" + m.clave).innerHTML = (m.icono ? ico(m.icono, ICO_COL[m.clave][1]) : '<b class="c-morado" style="font-size:11px;margin-right:6px">TDS</b>') +
-      (m.clave === "tds" ? "TDS (ppm)" : m.nombre.replace(" del ", " ").replace("Temperatura aire", "Temperatura") + " (" + m.unidad + ")");
+    $("th-" + m.clave).innerHTML = (m.icono ? ico(m.icono, ICO_COL[m.clave][1]) : '') +
+      (m.nombre.replace(" del ", " ").replace("Temperatura aire", "Temperatura") + " (" + m.unidad + ")");
   });
   $("th-temp").lastChild.textContent = "Temperatura (°C)";
   $("th-humAire").lastChild.textContent = "Humedad aire (%)";
@@ -33,14 +33,14 @@ montarLayout({ nuevo: true, estadoPropio: true, buscador: "Buscar por fecha, par
   $("kpis").innerHTML = TS_MEDIDAS.map(m =>
     '<article class="kpi ' + TINTE[m.clave] + '" id="hk-' + m.clave + '">' + iconoMedida(m) +
     '<div class="kpi-info"><span class="kpi-lab">' + m.nombre + '</span><b class="kpi-val" data-v>—</b><span class="kpi-sub">Promedio en el período</span></div>' +
-    '<svg class="kpi-spark" data-s></svg></article>').join("");
+    '</article>').join("");
 
   // ---- filtros rápidos
-  const RAP = [["todos", "Todos", "i-cal", "#16a34a"]].concat(TS_MEDIDAS.map(m => [m.clave, m.nombre, m.icono, m.color]));
+  const RAP = [["todos", "Todos", "i-cal", "#16a34a"]].concat(TS_MEDIDAS.map(m => [m.clave, m.nombre, m.icono, m.color, m.etiqueta]));
   function pintarRapidos() {
-    $("fr-lista").innerHTML = RAP.map(([k, t, i, c]) =>
+    $("fr-lista").innerHTML = RAP.map(([k, t, i, c, e]) =>
       '<button class="fr-item' + (param === k ? " on" : "") + '" data-k="' + k + '"><span class="fr-ico" style="background:' + c + '">' +
-      (i ? ico(i) : '<span class="ph-txt">TDS</span>') + '</span>' + t + ico("i-chev-r") + '</button>').join("");
+      (i ? ico(i) : '<span class="ph-txt tres">' + e + '</span>') + '</span>' + t + ico("i-chev-r") + '</button>').join("");
     $("fr-lista").querySelectorAll(".fr-item").forEach(b => b.onclick = () => fijarParam(b.dataset.k));
   }
   function fijarParam(k) {
@@ -60,25 +60,11 @@ montarLayout({ nuevo: true, estadoPropio: true, buscador: "Buscar por fecha, par
     if (!tsCfg().channelId) { vacio("Falta configurar el canal de ThingSpeak (Configuración)."); return; }
     $("aplicar").disabled = true;
     try {
-      let feeds = [];
-      // 1) Preferir API Neon (incluye TDS Parametro_Id 5)
-      try {
-        const neon = await cargarMuestras(true);
-        if (neon && neon.feeds && neon.feeds.length) {
-          const d0 = new Date(d + "T00:00:00");
-          const h0 = new Date(h + "T23:59:59");
-          feeds = neon.feeds.filter(f => f.t >= d0 && f.t <= h0);
-        }
-      } catch (eN) { console.warn("Neon historial", eN); }
-      // 2) Si Neon vacío, ThingSpeak
-      if (!feeds.length) {
-        const res = await tsFeeds({ results: 8000, start: d + " 00:00:00", end: h + " 23:59:59", average: it > 0 ? it : 0 });
-        feeds = res.feeds || [];
-      }
-      datos = feeds; cargado = true; pagina = 1;
+      const res = await tsFeeds({ results: 8000, start: d + " 00:00:00", end: h + " 23:59:59", average: it > 0 ? it : 0 });
+      datos = res.feeds; cargado = true; pagina = 1; rango = { d: d, h: h, it: it };
       pintarKPIs(); pintarGrafico(); subtitulo(); pintarTabla();
       $("h-punto").className = "punto";
-    } catch (e) { console.error(e); datos = []; cargado = true; vacio("No fue posible consultar la API ni ThingSpeak."); $("h-punto").className = "punto bad"; }
+    } catch (e) { console.error(e); datos = []; cargado = true; vacio("No fue posible consultar ThingSpeak. Intenta de nuevo."); $("h-punto").className = "punto bad"; }
     $("aplicar").disabled = false;
   }
   function subtitulo() {
@@ -88,7 +74,7 @@ montarLayout({ nuevo: true, estadoPropio: true, buscador: "Buscar por fecha, par
   }
   function vacio(msg) {
     datos = []; pintarKPIs(); $("tabla-sub").textContent = "Sin datos para mostrar";
-    $("evo").innerHTML = '<div class="graf-aviso">' + msg + '</div>';
+    $("evo").className = "evo"; $("evo").innerHTML = '<div class="graf-aviso">' + msg + '</div>';
     $("cuerpo").innerHTML = '<tr><td colspan="6" style="text-align:center;color:#5f7081;padding:22px">' + msg + '</td></tr>';
     $("pag").innerHTML = ""; $("pag-info").textContent = "";
   }
@@ -98,19 +84,15 @@ montarLayout({ nuevo: true, estadoPropio: true, buscador: "Buscar por fecha, par
     TS_MEDIDAS.forEach(m => {
       const t = $("hk-" + m.clave);
       t.querySelector("[data-v]").textContent = fmtVal(m, R[m.clave].prom);
-      const sp = t.querySelector("[data-s]"); sparkline(sp, R[m.clave].serie.slice(-40), m.color);
     });
   }
 
   function pintarGrafico() {
-    const sel = param === "todos" ? TS_MEDIDAS : [tsMedida(param)];
-    $("leyenda").innerHTML = sel.map(m => '<span><i style="background:' + m.color + '"></i>' + m.nombre.replace("Temperatura del aire", "Temperatura") .replace("Humedad del aire", "Humedad aire").replace("Humedad del suelo", "Humedad suelo").replace("TDS (sólidos disueltos)", "TDS") + (m.unidad ? " (" + m.unidad + ")" : "") + '</span>').join("");
-    if (!datos.length) { $("evo").innerHTML = '<div class="graf-aviso">No hay datos en el período elegido.</div>'; return; }
-    const series = sel.map(m => ({ nombre: m.nombre, color: m.color, eje: m.clave === "tds" ? "der" : "izq", datos: datos.map(f => ({ t: f.t, v: f.v[m.clave] })) }));
-    // si se muestra solo un parámetro el eje izquierdo se ajusta a sus valores
-    const op = { series: series };
-    if (param === "tds") { op.izq = { min: 0, max: 1500 }; series[0].eje = "izq"; }
-    lineaMulti($("evo"), op);
+    const cont = $("evo"), sel = param === "todos" ? TS_MEDIDAS : [tsMedida(param)];
+    if (!datos.length || !rango) { cont.className = "evo"; cont.innerHTML = '<div class="graf-aviso">No hay datos en el período elegido.</div>'; return; }
+    cont.className = "evo evo-grid" + (sel.length === 1 ? " uno" : "");
+    cont.innerHTML = sel.map(m => '<div class="mini-graf"><h4 class="gcard-tag">Campo ' + tsCfg().campos[m.clave] + ' · ThingSpeak</h4><div class="gcard-cuerpo" data-hf="' + m.clave + '"></div></div>').join("");
+    cont.querySelectorAll("[data-hf]").forEach(c => tsMontarIframe(c, tsMedida(c.dataset.hf), { start: rango.d + " 00:00:00", end: rango.h + " 23:59:59", average: rango.it, tipo: "line" }));
   }
 
   // ---- tabla (más recientes primero), con búsqueda y paginación
@@ -123,7 +105,7 @@ montarLayout({ nuevo: true, estadoPropio: true, buscador: "Buscar por fecha, par
   }
   function celda(m, v) {
     const [i, c] = ICO_COL[m.clave], est = tsEvaluar(m.clave, v), fuera = est === "bajo" || est === "alto";
-    return '<td' + (fuera ? ' class="fuera" title="Fuera del rango normal (' + est + ')"' : '') + '>' + (i ? ico(i, c) : '<b class="' + c + '" style="font-size:10px;margin-right:6px">TDS</b>') + fmtNum(v, m.dec) + '</td>';
+    return '<td' + (fuera ? ' class="fuera" title="Fuera del rango normal (' + est + ')"' : '') + '>' + (i ? ico(i, c) : '<b class="' + c + '" style="font-size:10px;margin-right:6px">' + m.etiqueta + '</b>') + fmtNum(v, m.dec) + '</td>';
   }
   function pintarTabla() {
     const f = filas(), total = f.length, pags = Math.max(1, Math.ceil(total / PP));
@@ -170,7 +152,7 @@ montarLayout({ nuevo: true, estadoPropio: true, buscador: "Buscar por fecha, par
   // ---- buscador de la barra superior
   window.alBuscar = q => {
     const s = sinAcentos(q);
-    const porNombre = s.length >= 3 && [["temp", /^temp/], ["humAire", /^humedad (del )?aire|^aire/], ["humSuelo", /^humedad (del )?suelo|^suelo/], ["tds", /^tds|ppm/]].find(([, re]) => re.test(s));
+    const porNombre = s.length >= 3 && [["temp", /^temp/], ["humAire", /^humedad (del )?aire|^aire/], ["humSuelo", /^humedad (del )?suelo|^suelo/], ["tds", /^(tds|solidos|sales)/]].find(([, re]) => re.test(s));
     if (porNombre) { texto = ""; fijarParam(porNombre[0]); return; }
     texto = q; pagina = 1; if (cargado) pintarTabla();
   };

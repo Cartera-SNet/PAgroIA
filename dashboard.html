@@ -24,11 +24,10 @@
   <section class="kpis" id="kpis"></section>
 
   <section class="graficas">
-    <article class="gcard" id="g-temp"><div class="gcard-cab"><h3>Temperatura del aire (°C)</h3><a class="gcard-ext" target="_blank" rel="noopener" title="Abrir en ThingSpeak" data-ext="temp"></a></div><div class="gcard-cuerpo" data-iframe="temp"></div></article>
-    <article class="gcard" id="g-suelo"><div class="gcard-cab"><h3>Humedad del suelo (%)</h3><a class="gcard-ext" target="_blank" rel="noopener" title="Abrir en ThingSpeak" data-ext="humSuelo"></a></div>
-      <div class="donut-cuerpo" id="donut-suelo"></div><div class="nivel" id="nivel-suelo"></div></article>
-    <article class="gcard" id="g-humaire"><div class="gcard-cab"><h3>Humedad del aire (%)</h3><a class="gcard-ext" target="_blank" rel="noopener" title="Abrir en ThingSpeak" data-ext="humAire"></a></div><div class="gcard-cuerpo" data-iframe="humAire"></div></article>
-    <article class="gcard" id="g-tds"><div class="gcard-cab"><h3>TDS (sólidos disueltos)</h3><a class="gcard-ext" target="_blank" rel="noopener" title="Abrir en ThingSpeak" data-ext="tds"></a></div><div class="gcard-cuerpo" data-iframe="tds"></div></article>
+    <article class="gcard" id="g-temp"><div class="gcard-cab"><h3 class="gcard-tag">Campo 1 · ThingSpeak</h3><a class="gcard-ext" target="_blank" rel="noopener" title="Abrir en ThingSpeak" data-ext="temp"></a></div><div class="gcard-cuerpo" data-iframe="temp"></div><div class="nivel" id="nivel-temp"></div></article>
+    <article class="gcard" id="g-humaire"><div class="gcard-cab"><h3 class="gcard-tag">Campo 2 · ThingSpeak</h3><a class="gcard-ext" target="_blank" rel="noopener" title="Abrir en ThingSpeak" data-ext="humAire"></a></div><div class="gcard-cuerpo" data-iframe="humAire"></div><div class="nivel" id="nivel-humAire"></div></article>
+    <article class="gcard" id="g-suelo"><div class="gcard-cab"><h3 class="gcard-tag">Campo 3 · ThingSpeak</h3><a class="gcard-ext" target="_blank" rel="noopener" title="Abrir en ThingSpeak" data-ext="humSuelo"></a></div><div class="gcard-cuerpo" data-iframe="humSuelo"></div><div class="nivel" id="nivel-humSuelo"></div></article>
+    <article class="gcard" id="g-tds"><div class="gcard-cab"><h3 class="gcard-tag">Campo 4 · ThingSpeak</h3><a class="gcard-ext" target="_blank" rel="noopener" title="Abrir en ThingSpeak" data-ext="tds"></a></div><div class="gcard-cuerpo" data-iframe="tds"></div><div class="nivel" id="nivel-tds"></div></article>
   </section>
 
   <section class="fila-ia">
@@ -54,9 +53,9 @@
 <script src="js/auth.js"></script>
 <script src="js/iconos.js"></script>
 <script src="js/ts.js"></script>
-<script src="js/muestras.js"></script>
 <script src="js/charts.js"></script>
 <script src="js/ui.js"></script>
+<script src="js/chat-nlu.js"></script>
 <script src="js/chat-core.js"></script>
 <script src="js/layout.js"></script>
 <script src="js/dashboard.js"></script>

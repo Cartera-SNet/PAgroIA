@@ -16,7 +16,7 @@ const LOGIN_CAMPOS = { usuario: "username", clave: "password", tokenRespuesta: "
 // Rangos por variable: [ok_min, ok_max, aceptable_min, aceptable_max]. Ajustar al cultivo.
 const RANGOS = {
   humedad_suelo: [30, 60, 20, 75], temp_aire: [15, 30, 10, 35],
-  humedad_aire: [40, 80, 30, 90], tds: [0, 1000, 0, 1500]
+  humedad_aire: [40, 80, 30, 90], ph: [6, 7.5, 5.5, 8], tds: [0, 1000, 0, 1500]
 };
 
 // ============================================================
@@ -28,19 +28,18 @@ const THINGSPEAK = {
   channelId: "3540815",
 
   // Qué campo del canal es cada medición
-  campos: { temp: 1, humAire: 2, humSuelo: 3, tds: 4 },
+  campos: { temp: 1, humAire: 2, humSuelo: 3, tds: 4 },      // el campo 4 es TDS (ppm); el pH ya no se mide
   // URLs completas de los gráficos (botón "insertar/embed" de cada gráfico en ThingSpeak).
   // Si se dejan vacías, la página arma la dirección oficial del gráfico con los colores del diseño.
   graficos: { temp: "", humaire: "", humsuelo: "", tds: "" },
   apiBase: "https://api.thingspeak.com",
   resultados: 60,          // lecturas recientes que se usan para las tarjetas
   refrescoSegundos: 15,    // cada cuánto se vuelven a pedir los datos
-  minutosEnLinea: 240        // si la última lectura es más vieja, se marca "sin datos recientes"
+  minutosEnLinea: 5        // si la última lectura es más vieja, se marca "sin datos recientes"
 };
 
-// Chat: POST { texto } -> { respuesta }. Órdenes LED también vía POST /esp32/comando.
+// Chat con IA (Punto 4): POST { texto } -> { respuesta }. Hasta que el backend lo tenga, avisa que no está disponible.
 const CHAT_ENDPOINT = API_BASE_URL + "/chat";
-const ESP32_COMANDO_URL = API_BASE_URL + "/esp32/comando";
 
 // ============================================================
 // CLASIFICADOR DE FERTILIDAD (Punto 3: Edge Impulse)
