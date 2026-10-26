@@ -3,7 +3,7 @@ const obtenerToken = () => localStorage.getItem(TOKEN_KEY) || sessionStorage.get
 const $ = id => document.getElementById(id);
 const esc = s => String(s).replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 const CAMPOS = [["humedad_suelo","Humedad del suelo","%"],["temp_aire","Temperatura del aire","°C"],
-  ["humedad_aire","Humedad del aire","%"],["ph","pH",""],["tds","TDS","ppm"]];
+  ["humedad_aire","Humedad del aire","%"],["tds","TDS","ppm"]];
 
 async function apiFetch(endpoint, options = {}) {
   const headers = { ...(options.headers || {}) };

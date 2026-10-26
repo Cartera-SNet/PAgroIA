@@ -73,6 +73,68 @@ function tsResumen(feeds) {
   return out;
 }
 
+/* Último registro de la API, unos 15 s, para no pedirlo en cada tarjeta. */
+let tsCacheUltimo = { t: 0, mapa: null, pending: null };
+
+function tsClaveDeNombre(nombre) {
+  const n = String(nombre || "").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim();
+  if (!n || /\bph\b/.test(n)) return null;
+  if (n.includes("tds") || n.includes("solidos")) return "tds";
+  if (n.includes("humedad") && n.includes("suelo")) return "humSuelo";
+  if (n.includes("humedad del aire") || n.includes("humedad ambiental")) return "humAire";
+  if (n.includes("temperatura") && !n.includes("suelo")) return "temp";
+  return null;
+}
+
+function tsMapaDesdeRegistro(j) {
+  const mapa = {};
+  const poner = (nombre, valor) => {
+    const clave = tsClaveDeNombre(nombre);
+    if (!clave || Object.prototype.hasOwnProperty.call(mapa, clave)) return;
+    const n = typeof valor === "number" ? (isFinite(valor) ? valor : null) : tsNum(String(valor).trim().replace(",", "."));
+    if (n !== null) mapa[clave] = n;
+  };
+  if (j && Array.isArray(j.valores) && j.valores.length) {
+    j.valores.forEach(v => poner(v && v.nombre, v && v.valor));
+    return mapa;
+  }
+  String((j && j.detalle) || "").split(";").forEach(parte => {
+    const i = parte.indexOf(":");
+    if (i < 0) return;
+    poner(parte.slice(0, i), parte.slice(i + 1));
+  });
+  return mapa;
+}
+
+/* Rellena ult solo donde ThingSpeak lo dejó en null. 0 cuenta. No toca las series. */
+async function tsCompletarDesdeApi(R) {
+  if (!R) return R;
+  let mapa = tsCacheUltimo.mapa;
+  if (!mapa || Date.now() - tsCacheUltimo.t >= 15000) {
+    try {
+      if (!tsCacheUltimo.pending) {
+        tsCacheUltimo.pending = fetch(API_BASE_URL + "/menu/ultimo-registro", { cache: "no-store" })
+          .then(r => { if (!r.ok) throw new Error("HTTP " + r.status); return r.json(); })
+          .then(j => {
+            const m = tsMapaDesdeRegistro(j);
+            tsCacheUltimo = { t: Date.now(), mapa: m, pending: null };
+            return m;
+          })
+          .catch(e => { tsCacheUltimo.pending = null; throw e; });
+      }
+      mapa = await tsCacheUltimo.pending;
+    } catch (e) { return R; }
+  }
+  TS_MEDIDAS.forEach(m => {
+    const n = mapa[m.clave];
+    if (R[m.clave] && R[m.clave].ult === null && n !== undefined && isFinite(n)) {
+      R[m.clave].ult = n;
+      R[m.clave].fuente = "api";
+    }
+  });
+  return R;
+}
+
 /* normal / bajo / alto / sin dato, usando RANGOS de config.js */
 function tsEvaluar(clave, v) {
   const m = tsMedida(clave), r = RANGOS[m.rango];

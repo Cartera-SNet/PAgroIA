@@ -94,10 +94,13 @@ montarLayout({ nuevo: true, estadoPropio: true });
     if (!tsCfg().channelId) { $("origen-datos").textContent = "Falta configurar el canal de ThingSpeak (Configuración)."; return false; }
     try {
       const res = await tsFeeds({ results: 10 }); tsPintarEstado(res);
-      const R = tsResumen(res ? res.feeds : []);
       if (!res || !res.feeds.length) { $("origen-datos").textContent = "El canal todavía no tiene lecturas."; return false; }
+      const R = await tsCompletarDesdeApi(tsResumen(res.feeds));
       CAMPOS_P.forEach(k => { if (R[k].ult !== null) $("p-" + k).value = Number(R[k].ult).toFixed(tsMedida(k).dec); });
-      $("origen-datos").textContent = "Valores tomados de la última lectura de ThingSpeak (" + fmtFechaHora(res.feeds[res.feeds.length - 1].t) + "). Puedes editarlos.";
+      const deApi = CAMPOS_P.filter(k => R[k].fuente === "api");
+      $("origen-datos").textContent = "Valores tomados de la última lectura de ThingSpeak (" + fmtFechaHora(res.feeds[res.feeds.length - 1].t) + ")." +
+        (deApi.length ? " " + deApi.map(k => tsMedida(k).nombre).join(", ") + " sale de la base de datos porque ThingSpeak aún no tiene ese campo." : "") +
+        " Puedes editarlos.";
       return true;
     } catch (e) { console.error(e); $("origen-datos").textContent = "No fue posible leer ThingSpeak."; if (!auto) avisarToast("No fue posible leer ThingSpeak."); return false; }
   }

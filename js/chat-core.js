@@ -55,7 +55,7 @@ async function chatDatos() {
   let res;
   try { res = await tsFeeds({ results: 30 }); } catch (e) { return { error: "No pude consultar ThingSpeak en este momento. Intenta de nuevo en unos segundos." }; }
   if (!res || !res.feeds.length) return { error: "El canal de ThingSpeak todavía no tiene lecturas." };
-  const R = tsResumen(res.feeds), ult = res.feeds[res.feeds.length - 1].t, hace = Math.max(0, Math.round((Date.now() - ult.getTime()) / 60000));
+  const R = await tsCompletarDesdeApi(tsResumen(res.feeds)), ult = res.feeds[res.feeds.length - 1].t, hace = Math.max(0, Math.round((Date.now() - ult.getTime()) / 60000));
   return { R: R, ult: ult, hace: hace, antig: hace > c.minutosEnLinea ? " <i>(última lectura hace " + haceTxt(hace) + ")</i>" : "" };
 }
 // ventana de datos: la pedida; si no hay lecturas, las últimas 60 (y lo dice)
@@ -72,10 +72,12 @@ async function chatVentana(op, etiqueta) {
 const chatVars = it => it.vars.length ? it.vars : TS_MEDIDAS.map(m => m.clave);
 
 function chatFrase(clave, D) {
-  const m = tsMedida(clave), v = D.R[clave].ult;
+  const m = tsMedida(clave), reg = D.R[clave], v = reg.ult;
   if (v === null) return "No hay lecturas de " + nombreMin(m) + " todavía" + (clave === "tds" ? " (el ESP32 aún no envía el TDS al campo 4 del canal)." : ".");
   const e = chatEstado(clave, v);
-  return CHAT_ICONO[e] + " " + m.nombre + ": <b>" + fmtVal(m, v) + "</b> (" + (e === "normal" ? "normal " + chatRango(clave) : CHAT_TXT_ESTADO[e] + "; normal " + chatRango(clave)) + "). " + CHAT_CONSEJO[clave][e];
+  const base = CHAT_ICONO[e] + " " + m.nombre + ": <b>" + fmtVal(m, v) + "</b> (" + (e === "normal" ? "normal " + chatRango(clave) : CHAT_TXT_ESTADO[e] + "; normal " + chatRango(clave)) + "). " + CHAT_CONSEJO[clave][e];
+  if (clave === "tds" && reg.fuente === "api") return base + " Sale de la base de datos porque el campo 4 de ThingSpeak aún no tiene lecturas.";
+  return base;
 }
 function chatFertilidad(D) {
   const est = TS_MEDIDAS.filter(m => D.R[m.clave].ult !== null).map(m => [m.clave, chatEstado(m.clave, D.R[m.clave].ult)]);

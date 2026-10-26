@@ -1,7 +1,7 @@
 /* ==========================================================
    AgroIA - Inicio
    - Tarjetas, anillo de humedad del suelo y estado del sistema: datos reales del canal de ThingSpeak.
-   - Temperatura, humedad del aire y pH: gráficos oficiales de ThingSpeak (iframes).
+   - Temperatura del aire, humedad del aire, humedad del suelo y TDS: gráficos oficiales de ThingSpeak (iframes).
    Configuración: js/config.js (THINGSPEAK) o la pantalla Configuración.
    ========================================================== */
 montarLayout({ nuevo: true, estadoPropio: true });
@@ -32,15 +32,17 @@ montarLayout({ nuevo: true, estadoPropio: true });
     TS_MEDIDAS.forEach(m => {
       const r = R[m.clave], n = $("nivel-" + m.clave); if (!n) return;
       const est = r.ult === null ? "sin" : tsEvaluar(m.clave, r.ult);
+      const texto = est === "sin" ? "Sin lecturas de " + nombreMin(m) + " en el canal"
+        : (r.fuente === "api" ? "Última lectura de la base de datos (ThingSpeak aún no tiene este campo)" : nivelTexto(est));
       n.className = "nivel" + (est === "normal" ? "" : " " + est);
-      n.innerHTML = ico("i-leaf") + "<span>" + (est === "sin" ? "Sin lecturas de " + nombreMin(m) + " en el canal" : nivelTexto(est)) + "</span>";
+      n.innerHTML = ico("i-leaf") + "<span>" + texto + "</span>";
     });
   }
   async function actualizar() {
     let res = null;
     try { res = await tsFeeds({ results: tsCfg().resultados }); }
     catch (e) { console.error(e); setEstadoSistema("bad", "Sin conexión con ThingSpeak", null); }
-    const R = tsResumen(res ? res.feeds : []);
+    const R = await tsCompletarDesdeApi(tsResumen(res ? res.feeds : []));
     TS_MEDIDAS.forEach(m => pintarKPI(m, R[m.clave]));
     pintarNiveles(R);
     if (res) tsPintarEstado(res); else if (!tsCfg().channelId) tsPintarEstado(null);
