@@ -176,6 +176,17 @@ function tsPintarEstado(res) {
   setEstadoSistema(ok ? "ok" : "warn", ok ? "Sistema en línea" : "Sin datos recientes", ult);
 }
 
+/* Si ThingSpeak no tiene puntos y la base sí tiene un número, lo muestra en la caja del gráfico. */
+function tsPintarCaja(cont, m, r) {
+  if (!cont || !m) return;
+  if (r && r.n === 0 && r.fuente === "api" && r.ult !== null && r.ult !== undefined) {
+    cont.innerHTML = '<div class="graf-aviso"><b>' + fmtVal(m, r.ult) + '</b><span>ThingSpeak no tiene lecturas en el campo '
+      + tsCfg().campos[m.clave] + '. Este valor es el último guardado en la base de datos.</span></div>';
+    return;
+  }
+  if (!cont.querySelector("iframe")) tsMontarIframe(cont, m);
+}
+
 /* Pone un iframe de ThingSpeak en un contenedor (o un aviso si falta el canal) */
 function tsMontarIframe(cont, m, o) {
   const url = tsChartUrl(m, o);

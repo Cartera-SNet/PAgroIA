@@ -14,7 +14,10 @@ montarLayout({ nuevo: true, estadoPropio: true });
     try { res = await tsFeeds({ results: tsCfg().resultados }); }
     catch (e) { console.error(e); setEstadoSistema("bad", "Sin conexión con ThingSpeak", null); }
     const R = await tsCompletarDesdeApi(tsResumen(res ? res.feeds : []));
-    TS_MEDIDAS.forEach(m => pintarKPI(m, R[m.clave]));
+    TS_MEDIDAS.forEach(m => {
+      pintarKPI(m, R[m.clave]);
+      tsPintarCaja(document.querySelector('[data-iframe="' + m.clave + '"]'), m, R[m.clave]);
+    });
     if (res) {
       tsPintarEstado(res);
       const ult = res.feeds.length ? res.feeds[res.feeds.length - 1].t : null;
