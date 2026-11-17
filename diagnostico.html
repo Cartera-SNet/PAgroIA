@@ -1,0 +1,252 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>AgroIA · Diagnóstico de datos</title>
+<style>
+  :root{--verde:#0f5132;--v2:#198754;--gris:#5b6b62;--borde:#dfe7e2;--fondo:#f3f6f4;--rojo:#b42318;--ambar:#b54708;--azul:#175cd3}
+  *{box-sizing:border-box}
+  body{margin:0;font-family:Inter,system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;background:var(--fondo);color:#16251d;line-height:1.45}
+  main{max-width:1050px;margin:0 auto;padding:22px 16px 60px}
+  h1{margin:0 0 4px;font-size:24px;color:var(--verde)} h2{font-size:17px;margin:0 0 10px;color:var(--verde)}
+  p.sub{margin:0 0 16px;color:var(--gris)}
+  .card{background:#fff;border:1px solid var(--borde);border-radius:14px;padding:16px;margin:0 0 14px;box-shadow:0 1px 2px rgba(0,0,0,.03)}
+  .fila{display:flex;flex-wrap:wrap;gap:10px;align-items:end}
+  label{display:flex;flex-direction:column;font-size:12px;color:var(--gris);gap:4px;flex:1 1 220px}
+  input{padding:9px 10px;border:1px solid var(--borde);border-radius:9px;font-size:14px}
+  button{background:var(--v2);color:#fff;border:0;border-radius:10px;padding:10px 18px;font-size:14px;font-weight:600;cursor:pointer}
+  button.sec{background:#e6efe9;color:var(--verde)} button:disabled{opacity:.6;cursor:wait}
+  .hall{display:flex;gap:10px;padding:10px 12px;border-radius:10px;margin:0 0 8px;border:1px solid var(--borde)}
+  .hall b{display:block} .hall small{color:var(--gris)} .hall pre{margin:6px 0 0}
+  .hall.err{background:#fef3f2;border-color:#fecdca} .hall.warn{background:#fffaeb;border-color:#fedf89} .hall.ok{background:#ecfdf3;border-color:#abefc6} .hall.info{background:#eff8ff;border-color:#b2ddff}
+  .ico{font-size:18px;line-height:1.2}
+  table{width:100%;border-collapse:collapse;font-size:13px} th,td{padding:7px 8px;border-bottom:1px solid var(--borde);text-align:left;vertical-align:top} th{color:var(--gris);font-weight:600;font-size:12px}
+  .tabla{overflow-x:auto} .tag{display:inline-block;padding:1px 8px;border-radius:99px;font-size:11px;font-weight:600}
+  .t-ok{background:#d1fadf;color:#05603a}.t-warn{background:#fef0c7;color:#93370d}.t-err{background:#fee4e2;color:#912018}.t-info{background:#d1e9ff;color:#175cd3}
+  pre{background:#0f1f17;color:#d6f5e3;padding:10px 12px;border-radius:10px;overflow:auto;font-size:12.5px;white-space:pre-wrap;word-break:break-word}
+  #resumen{font-size:17px;font-weight:600} .peq{font-size:12px;color:var(--gris)}
+</style>
+</head>
+<body>
+<main>
+  <h1>Diagnóstico de datos de AgroIA</h1>
+  <p class="sub">Revisa en un minuto si el ESP32 está enviando datos a <b>ThingSpeak</b> y a la <b>base de datos</b>, si los nombres y los id de sensores y parámetros están bien, y qué corregir. Solo lee datos: no cambia nada.</p>
+
+  <div class="card">
+    <div class="fila">
+      <label>Dirección de la API<input id="api" value="https://agroiabackend.up.railway.app"></label>
+      <label>Canal de ThingSpeak<input id="canal" value="3540815"></label>
+      <button id="ir">Revisar ahora</button>
+    </div>
+  </div>
+
+  <div class="card" id="cResumen" hidden><h2>Resultado</h2><div id="resumen"></div><div id="hallazgos" style="margin-top:12px"></div></div>
+  <div class="card" id="cTs" hidden><h2>1 · ThingSpeak</h2><div id="ts" class="tabla"></div></div>
+  <div class="card" id="cDb" hidden><h2>2 · Base de datos (API)</h2><div id="db"></div></div>
+  <div class="card" id="cLcd" hidden><h2>3 · Lo que mostraría el menú del LCD</h2><div id="lcd"></div></div>
+  <div class="card" id="cInf" hidden><h2>Informe para copiar</h2><button id="copiar" class="sec">Copiar informe</button> <span id="copiado" class="peq"></span><pre id="informe"></pre></div>
+</main>
+
+<script>
+"use strict";
+const $ = id => document.getElementById(id);
+const esc = s => String(s == null ? "" : s).replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+const TZ = "America/Bogota";
+
+/* Nombres recomendados: así los reconocen la página, el bot, el menú del LCD y Sinric */
+const REC = {
+  temp:     { etq: "Temperatura del aire", param: "Temperatura del aire", unidad: "°C",  tipo: "Temperatura del aire", tipoDesc: "Sensor para medir la temperatura del aire (°C)", campo: 1, letra: "T" },
+  humAire:  { etq: "Humedad del aire",     param: "Humedad del aire",     unidad: "%",   tipo: "Humedad del aire",     tipoDesc: "Sensor para medir la humedad relativa del aire (%)", campo: 2, letra: "A" },
+  humSuelo: { etq: "Humedad del suelo",    param: "Humedad del suelo",    unidad: "%",   tipo: "Humedad del suelo",    tipoDesc: "Sensor para medir el porcentaje de humedad presente en el suelo", campo: 3, letra: "S" },
+  tds:      { etq: "TDS",                  param: "TDS",                  unidad: "ppm", tipo: "TDS",                  tipoDesc: "Sensor para medir sólidos disueltos totales (ppm)", campo: 4, letra: "D" }
+};
+const OBLIG = ["temp", "humAire", "humSuelo", "tds"];
+
+/* Qué variable es, según el NOMBRE (igual que la página, el bot y el menú) */
+function clave(nombre) {
+  const n = String(nombre || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+  if (/\btds\b|solidos|conductividad|salinidad/.test(n)) return "tds";
+  if (n.includes("humedad") && /aire|ambient|relativ/.test(n)) return "humAire";
+  if (n.includes("humedad") || n.includes("moisture")) return "humSuelo";
+  if (n.includes("temp")) return "temp";
+  if (/\bph\b|acidez/.test(n)) return "ph";
+  return null;
+}
+/* un sensor DHT mide temperatura y humedad del aire a la vez: ese cruce es normal */
+const compat = (a, b) => a === b || (a === "temp" && b === "humAire") || (a === "humAire" && b === "temp");
+const fecha = d => d.toLocaleString("es-CO", { timeZone: TZ, hour12: true, day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" }).replace(/a\.\s?m\./i, "AM").replace(/p\.\s?m\./i, "PM");
+const haceTxt = m => m < 1 ? "menos de 1 min" : m < 60 ? Math.round(m) + " min" : m < 1440 ? Math.floor(m / 60) + " h " + Math.round(m % 60) + " min" : Math.floor(m / 1440) + " día(s)";
+const json = o => JSON.stringify(o, null, 2);
+
+async function leer(url, ms) {
+  const c = new AbortController(), t = setTimeout(() => c.abort(), ms || 20000);
+  try { const r = await fetch(url, { signal: c.signal }); if (!r.ok) return { error: "HTTP " + r.status }; return { datos: await r.json() }; }
+  catch (e) { return { error: e.name === "AbortError" ? "tardó demasiado" : "no se pudo conectar" }; }
+  finally { clearTimeout(t); }
+}
+/* Lee solo las primeras n filas de un arreglo JSON enorme (/muestras/list viene de la más reciente a la más antigua) */
+async function primeras(url, n) {
+  const c = new AbortController(), t = setTimeout(() => c.abort(), 25000);
+  try {
+    const r = await fetch(url, { signal: c.signal }); if (!r.ok) return { error: "HTTP " + r.status };
+    const rd = r.body.getReader(), dec = new TextDecoder(); const out = []; let buf = "", i = 0, prof = 0, ini = -1, str = false, esc_ = false;
+    while (out.length < n) {
+      const { value, done } = await rd.read(); if (done) break; buf += dec.decode(value, { stream: true });
+      for (; i < buf.length && out.length < n; i++) {
+        const ch = buf[i];
+        if (str) { if (esc_) esc_ = false; else if (ch === "\\") esc_ = true; else if (ch === '"') str = false; continue; }
+        if (ch === '"') { str = true; continue; }
+        if (ch === "{") { if (prof === 0) ini = i; prof++; } else if (ch === "}") { prof--; if (prof === 0 && ini >= 0) { out.push(JSON.parse(buf.slice(ini, i + 1))); ini = -1; } }
+      }
+    }
+    try { await rd.cancel(); } catch (e) { /* ya terminó */ }
+    return { datos: out };
+  } catch (e) { return { error: e.name === "AbortError" ? "tardó demasiado" : "no se pudo conectar" }; }
+  finally { clearTimeout(t); }
+}
+
+async function revisar() {
+  const api = $("api").value.trim().replace(/\/+$/, ""), canal = $("canal").value.trim(), H = [];
+  const add = (nivel, titulo, detalle, arreglo) => H.push({ nivel, titulo, detalle: detalle || "", arreglo: arreglo || "" });
+  $("ir").disabled = true; $("ir").textContent = "Revisando…";
+  const [ts, tipos, params, sens, mue, ult, prom] = await Promise.all([
+    leer("https://api.thingspeak.com/channels/" + encodeURIComponent(canal) + "/feeds.json?results=60"), leer(api + "/tipos_sensor/list"), leer(api + "/parametros/list"),
+    leer(api + "/sensores/list"), primeras(api + "/muestras/list", 600), leer(api + "/menu/ultimo-registro"), leer(api + "/menu/promedio-24h")]);
+  const INF = [];                                                      // texto del informe
+
+  /* ---------------- 1. ThingSpeak ---------------- */
+  let htmlTs = "";
+  if (ts.error) { add("err", "No pude leer ThingSpeak (" + ts.error + ")", "Revisa el número del canal (" + canal + ") y que el canal sea público."); htmlTs = "<p>No se pudo leer el canal.</p>"; }
+  else {
+    const feeds = ts.datos.feeds || [], canalInfo = ts.datos.channel || {};
+    const ult_ = feeds.length ? new Date(feeds[feeds.length - 1].created_at) : null, edad = ult_ ? (Date.now() - ult_.getTime()) / 60000 : null;
+    if (!feeds.length) add("err", "El canal de ThingSpeak no tiene ninguna entrada", "El ESP32 nunca ha enviado datos a este canal (o el número de canal es otro).");
+    else if (edad > 15) add("err", "ThingSpeak NO recibe datos desde hace " + haceTxt(edad), "Última entrada: " + fecha(ult_) + ". Mientras el ESP32 no envíe, ningún gráfico se actualiza (ni la temperatura, ni las humedades, ni el TDS). Revisa que el ESP32 esté encendido, con WiFi y enviando cada 20 segundos o más, y que la Write API Key sea la correcta.");
+    else add("ok", "ThingSpeak recibe datos", "Última entrada hace " + haceTxt(edad) + " (" + fecha(ult_) + ").");
+    let filas = "";
+    for (const k of OBLIG) {
+      const n = REC[k].campo, con = feeds.filter(f => f["field" + n] !== null && f["field" + n] !== undefined && f["field" + n] !== ""), nombre = canalInfo["field" + n] || "(sin nombre)";
+      const ultimo = con.length ? con[con.length - 1] : null, v = ultimo ? ultimo["field" + n] : "—";
+      filas += "<tr><td>Campo " + n + "</td><td>" + esc(nombre) + "</td><td>" + esc(REC[k].etq) + "</td><td>" + con.length + " de " + feeds.length + "</td><td>" + (ultimo ? esc(v) + " · " + esc(fecha(new Date(ultimo.created_at))) : "—") + "</td></tr>";
+      INF.push("ThingSpeak campo " + n + " (" + REC[k].etq + "): " + con.length + " de " + feeds.length + " entradas con dato; nombre en el canal: " + nombre);
+      if (feeds.length && !con.length) {
+        add("err", "El campo " + n + " (" + REC[k].etq + ") no trae ningún dato", k === "tds"
+          ? "El gráfico del campo 4 ya se llama «TDS», pero ninguna entrada trae field4: el firmware no está enviando &field4=<TDS en ppm>. Cambiar el título del gráfico no crea datos. Envíalo solo si la lectura es válida (nunca «nan»)."
+          : "Ninguna de las últimas " + feeds.length + " entradas trae field" + n + ". Revisa el firmware.");
+      }
+      if (k === "tds" && canalInfo.field4 && !/tds/i.test(canalInfo.field4)) add("warn", "El campo 4 del canal se llama «" + canalInfo.field4 + "»", "Ponle «TDS» en ThingSpeak: Channel Settings > Field 4.");
+    }
+    htmlTs = "<table><thead><tr><th>Campo</th><th>Nombre en ThingSpeak</th><th>Debe ser</th><th>Entradas con dato (últimas " + feeds.length + ")</th><th>Último valor</th></tr></thead><tbody>" + filas + "</tbody></table>";
+  }
+  $("ts").innerHTML = htmlTs;
+
+  /* ---------------- 2. Base de datos ---------------- */
+  let htmlDb = "";
+  const P = params.datos || [], T = tipos.datos || [], S = sens.datos || [];
+  if (params.error) add("err", "No pude leer /parametros/list (" + params.error + ")", "Revisa que la API esté activa: " + api + "/docs");
+  if (tipos.error) add("warn", "No pude leer /tipos_sensor/list (" + tipos.error + ")");
+  if (sens.error) add("warn", "No pude leer /sensores/list (" + sens.error + ")");
+  const tipoPorId = Object.fromEntries(T.map(t => [t.TipoSensor_Id, t])), sensorPorId = Object.fromEntries(S.map(s => [s.Sensor_Id, s]));
+  const parClave = {}; P.forEach(p => { const c = clave(p.Parametro_Nombre); if (c && c !== "ph" && !parClave[c]) parClave[c] = p; });
+  const tipoClave = {}; T.forEach(t => { const c = clave(t.TipoSensor_Nombre); if (c && c !== "ph" && !tipoClave[c]) tipoClave[c] = t; });
+
+  // parámetros
+  let fP = "";
+  P.forEach(p => {
+    const c = clave(p.Parametro_Nombre), rec = c && c !== "ph" ? REC[c] : null; let est;
+    if (c === "ph") est = '<span class="tag t-info">pH retirado: se ignora</span>';
+    else if (!c) { est = '<span class="tag t-warn">nombre no reconocido</span>'; add("warn", "Parámetro #" + p.Parametro_Id + " «" + p.Parametro_Nombre + "»: no sé qué variable es", "La página, el bot y el menú no lo reconocen. Los nombres válidos son: " + OBLIG.map(k => "«" + REC[k].param + "»").join(", ") + "."); }
+    else if (p.Parametro_Nombre === rec.param && p.Parametro_Unidad === rec.unidad) est = '<span class="tag t-ok">nombre correcto</span>';
+    else { est = '<span class="tag t-warn">se reconoce, pero conviene «' + esc(rec.param) + '» (' + esc(rec.unidad) + ")</span>"; add("warn", "Parámetro #" + p.Parametro_Id + " se llama «" + p.Parametro_Nombre + "» (" + p.Parametro_Unidad + ")", "Funciona, pero el nombre recomendado es «" + rec.param + "» (" + rec.unidad + "). Para cambiarlo en Swagger: PUT /parametros/update/" + p.Parametro_Id, "PUT /parametros/update/" + p.Parametro_Id + "\n" + json({ Parametro_Nombre: rec.param, Parametro_Unidad: rec.unidad })); }
+    fP += "<tr><td>" + p.Parametro_Id + "</td><td>" + esc(p.Parametro_Nombre) + "</td><td>" + esc(p.Parametro_Unidad) + "</td><td>" + (c === "ph" ? "pH (retirado)" : c ? esc(REC[c].etq) : "—") + "</td><td>" + est + "</td></tr>";
+    INF.push("Parámetro #" + p.Parametro_Id + " «" + p.Parametro_Nombre + "» (" + p.Parametro_Unidad + ") -> " + (c || "no reconocido"));
+  });
+  if (!params.error) OBLIG.forEach(k => { if (!parClave[k]) add("err", "Falta el parámetro «" + REC[k].param + "» en la base", "Sin ese parámetro no hay dónde guardar " + REC[k].etq + " y el menú, el bot y la página no lo muestran. Créalo en Swagger: POST /parametros/create", "POST /parametros/create\n" + json({ Parametro_Nombre: REC[k].param, Parametro_Unidad: REC[k].unidad, Parametro_Descripcion: REC[k].etq, Parametro_ValorMinimo: k === "tds" ? 0 : null, Parametro_ValorMaximo: k === "tds" ? 1000 : null })); });
+  htmlDb += "<h3>Parámetros medidos</h3><div class='tabla'><table><thead><tr><th>Id</th><th>Nombre</th><th>Unidad</th><th>Variable</th><th>Estado</th></tr></thead><tbody>" + (fP || "<tr><td colspan=5>—</td></tr>") + "</tbody></table></div>";
+
+  // tipos de sensor
+  let fT = "";
+  T.forEach(t => {
+    const c = clave(t.TipoSensor_Nombre), rec = c && c !== "ph" ? REC[c] : null; let est;
+    if (c === "ph") est = '<span class="tag t-info">pH retirado: se ignora</span>';
+    else if (!c) est = '<span class="tag t-warn">nombre no reconocido</span>';
+    else if (t.TipoSensor_Nombre === rec.tipo) est = '<span class="tag t-ok">nombre correcto</span>';
+    else { est = '<span class="tag t-warn">conviene «' + esc(rec.tipo) + "»</span>"; add("warn", "Tipo de sensor #" + t.TipoSensor_Id + " se llama «" + t.TipoSensor_Nombre + "»", "Se entiende, pero el nombre recomendado es «" + rec.tipo + "». En Swagger: PUT /tipos_sensor/update/" + t.TipoSensor_Id, "PUT /tipos_sensor/update/" + t.TipoSensor_Id + "\n" + json({ TipoSensor_Nombre: rec.tipo, TipoSensor_Descripcion: rec.tipoDesc })); }
+    fT += "<tr><td>" + t.TipoSensor_Id + "</td><td>" + esc(t.TipoSensor_Nombre) + "</td><td>" + (c === "ph" ? "pH (retirado)" : c ? esc(REC[c].etq) : "—") + "</td><td>" + est + "</td></tr>";
+    INF.push("Tipo de sensor #" + t.TipoSensor_Id + " «" + t.TipoSensor_Nombre + "» -> " + (c || "no reconocido"));
+  });
+  htmlDb += "<h3>Tipos de sensor</h3><div class='tabla'><table><thead><tr><th>Id</th><th>Nombre</th><th>Variable</th><th>Estado</th></tr></thead><tbody>" + (fT || "<tr><td colspan=4>—</td></tr>") + "</tbody></table></div>";
+
+  // sensores
+  let fS = "";
+  S.forEach(s => { const t = tipoPorId[s.TipoSensor_Id], c = t ? clave(t.TipoSensor_Nombre) : null; fS += "<tr><td>" + s.Sensor_Id + "</td><td>" + esc(s.Sensor_Nombre) + "</td><td>" + s.TipoSensor_Id + " · " + esc(t ? t.TipoSensor_Nombre : "?") + "</td><td>" + (c === "ph" ? "pH (retirado)" : c ? esc(REC[c].etq) : "—") + "</td><td>" + esc(s.Sensor_Estado || "") + "</td></tr>"; INF.push("Sensor #" + s.Sensor_Id + " «" + s.Sensor_Nombre + "» tipo " + s.TipoSensor_Id + " (" + (t ? t.TipoSensor_Nombre : "?") + ")"); });
+  htmlDb += "<h3>Sensores</h3><div class='tabla'><table><thead><tr><th>Id</th><th>Nombre</th><th>Tipo</th><th>Mide</th><th>Estado</th></tr></thead><tbody>" + (fS || "<tr><td colspan=5>—</td></tr>") + "</tbody></table></div>";
+  if (!sens.error && !tipos.error && tipoClave.tds && !S.some(s => (tipoPorId[s.TipoSensor_Id] && clave(tipoPorId[s.TipoSensor_Id].TipoSensor_Nombre) === "tds")))
+    add("warn", "No hay ningún sensor registrado de tipo TDS (id " + tipoClave.tds.TipoSensor_Id + ")", "Los datos del TDS deben guardarse con un sensor de ese tipo. Créalo en Swagger: POST /sensores/create", "POST /sensores/create\n" + json({ Lote_Id: S.length ? S[0].Lote_Id : 1, TipoSensor_Id: tipoClave.tds.TipoSensor_Id, Sensor_Nombre: "Sensor TDS", Sensor_NumeroSerie: "TDS-001", Sensor_FechaInstalacion: new Date().toISOString().slice(0, 10), Sensor_Estado: "ACTIVO" }));
+  if (!tipos.error && !tipoClave.tds) add("warn", "Falta el tipo de sensor «TDS»", "Créalo en Swagger: POST /tipos_sensor/create", "POST /tipos_sensor/create\n" + json({ TipoSensor_Nombre: "TDS", TipoSensor_Descripcion: REC.tds.tipoDesc }));
+
+  // muestras recientes por parámetro
+  let fM = "";
+  if (mue.error) add("err", "No pude leer /muestras/list (" + mue.error + ")", "La base no responde: revisa " + api + "/docs");
+  else {
+    const filas = mue.datos, por = {}; filas.forEach(m => { (por[m.Parametro_Id] = por[m.Parametro_Id] || []).push(m); });
+    const nueva = filas.length ? new Date(filas[0].Muestra_FechaHora + "Z") : null, edadN = nueva ? (Date.now() - nueva.getTime()) / 60000 : null;
+    if (!filas.length) add("err", "La base no tiene ninguna muestra", "El ESP32 nunca ha enviado datos a POST /muestras/create.");
+    else if (edadN > 15) add("err", "La base de datos NO recibe datos desde hace " + haceTxt(edadN), "Última muestra: " + fecha(nueva) + ". El ESP32 no está enviando a la API (POST /muestras/create).");
+    else add("ok", "La base de datos recibe datos", "Última muestra hace " + haceTxt(edadN) + ".");
+    OBLIG.forEach(k => {
+      const p = parClave[k]; if (!p) return;
+      const ms = por[p.Parametro_Id] || [];
+      if (!ms.length) { fM += "<tr><td>" + p.Parametro_Id + " · " + esc(p.Parametro_Nombre) + "</td><td colspan=4><span class='tag t-err'>sin muestras entre las últimas " + filas.length + "</span></td></tr>"; if (filas.length) add("err", "No llegan muestras de «" + p.Parametro_Nombre + "» a la base", "Entre las últimas " + filas.length + " muestras no hay ninguna con Parametro_Id = " + p.Parametro_Id + ". El ESP32 debe enviarla con POST /muestras/create usando ese Parametro_Id" + (k === "tds" && tipoClave.tds ? " y un Sensor_Id cuyo tipo sea TDS (tipo " + tipoClave.tds.TipoSensor_Id + ")." : ".")); return; }
+      const u = ms[0], edad = (Date.now() - new Date(u.Muestra_FechaHora + "Z").getTime()) / 60000, sensores = [...new Set(ms.map(m => m.Sensor_Id))];
+      fM += "<tr><td>" + p.Parametro_Id + " · " + esc(p.Parametro_Nombre) + "</td><td>" + esc(u.Muestra_Valor) + " " + esc(p.Parametro_Unidad) + "</td><td>" + esc(fecha(new Date(u.Muestra_FechaHora + "Z"))) + "</td><td>hace " + haceTxt(edad) + "</td><td>" + sensores.map(id => "#" + id + " (" + esc(sensorPorId[id] && tipoPorId[sensorPorId[id].TipoSensor_Id] ? tipoPorId[sensorPorId[id].TipoSensor_Id].TipoSensor_Nombre : "?") + ")").join(", ") + "</td></tr>";
+      INF.push("Muestras «" + p.Parametro_Nombre + "» (parámetro #" + p.Parametro_Id + "): última " + u.Muestra_Valor + " hace " + haceTxt(edad) + "; sensor(es): " + sensores.join(", "));
+      sensores.forEach(id => {                                         // el dato debe ir con un sensor del tipo correcto
+        const s = sensorPorId[id], t = s ? tipoPorId[s.TipoSensor_Id] : null, ct = t ? clave(t.TipoSensor_Nombre) : null;
+        if (s && t && ct && !compat(ct, k)) add("warn", "«" + p.Parametro_Nombre + "» llega con el sensor #" + id + " «" + s.Sensor_Nombre + "», que es de tipo «" + t.TipoSensor_Nombre + "» (id " + t.TipoSensor_Id + ")", "Cada variable debe guardarse con un sensor de su propio tipo" + (tipoClave[k] ? " (para «" + p.Parametro_Nombre + "»: tipo «" + tipoClave[k].TipoSensor_Nombre + "», id " + tipoClave[k].TipoSensor_Id + ")" : "") + ". Corrige el Sensor_Id que usa el ESP32 en POST /muestras/create.");
+      });
+    });
+  }
+  htmlDb += "<h3>Última muestra de cada variable (en la base)</h3><div class='tabla'><table><thead><tr><th>Parámetro</th><th>Valor</th><th>Fecha</th><th>Antigüedad</th><th>Sensor(es) que la enviaron</th></tr></thead><tbody>" + (fM || "<tr><td colspan=5>—</td></tr>") + "</tbody></table></div>";
+  /* qué ids debe mandar el ESP32 en cada POST /muestras/create: Parametro_Id (qué se mide) y Sensor_Id (un sensor cuyo TIPO sea el correcto; el tipo no se manda, cuelga del sensor) */
+  const sensoresDe = k => S.filter(x => { const t = tipoPorId[x.TipoSensor_Id], c = t ? clave(t.TipoSensor_Nombre) : null; return c && compat(c, k); });
+  const idsEsp = OBLIG.filter(k => parClave[k]).map(k => { const ss = sensoresDe(k); return REC[k].etq + " → Parametro_Id " + parClave[k].Parametro_Id + ", " + (ss.length ? "Sensor_Id " + ss.map(x => x.Sensor_Id + " (" + x.Sensor_Nombre + ")").join(" o ") : "Sensor_Id: falta crear un sensor de ese tipo"); });
+  if (idsEsp.length) { htmlDb += "<p class='peq'><b>Qué debe mandar el ESP32 en cada POST /muestras/create</b> (Sensor_Id + Parametro_Id; el tipo de sensor no se manda, cuelga del sensor):</p><ul class='peq'>" + idsEsp.map(t => "<li>" + esc(t) + "</li>").join("") + "</ul>"; INF.push("IDs que debe usar el ESP32: " + idsEsp.join(" | ")); }
+  $("db").innerHTML = htmlDb;
+
+  /* ---------------- 3. Menú del LCD ---------------- */
+  let htmlLcd = "";
+  [["/menu/ultimo-registro", ult], ["/menu/promedio-24h", prom]].forEach(([ruta, r]) => {
+    if (r.error) htmlLcd += "<p><b>" + ruta + "</b>: no respondió (" + r.error + ")</p>";
+    else { htmlLcd += "<p><b>" + ruta + "</b><br>Línea 1: <code>" + esc(r.datos.linea1) + "</code> · Línea 2: <code>" + esc(r.datos.linea2) + "</code><br><span class='peq'>" + esc(r.datos.detalle) + "</span></p>"; INF.push("Menú " + ruta + ": " + r.datos.linea1 + " | " + r.datos.linea2 + " | " + r.datos.detalle); }
+  });
+  if (!ult.error && !mue.error && mue.datos.length) {
+    const nvar = new Set(mue.datos.map(m => m.Parametro_Id)).size, nmenu = String(ult.datos.detalle || "").split(";").filter(Boolean).length;
+    if (nvar > 1 && nmenu === 1 && ult.datos.linea2 !== "Sin datos") add("warn", "«Último registro» del menú muestra una sola variable", "La API publicada todavía tiene la versión anterior de /menu/ultimo-registro (solo devuelve la última variable que llegó). Sube el archivo app/routes/menu_routes.py de la entrega nueva.");
+  }
+  $("lcd").innerHTML = htmlLcd;
+
+  /* ---------------- Resultado ---------------- */
+  const e = H.filter(h => h.nivel === "err").length, w = H.filter(h => h.nivel === "warn").length, orden = { err: 0, warn: 1, info: 2, ok: 3 };
+  H.sort((a, b) => orden[a.nivel] - orden[b.nivel]);
+  const ICO = { err: "⛔", warn: "⚠️", ok: "✅", info: "ℹ️" };
+  $("resumen").innerHTML = e ? "⛔ Hay " + e + " problema(s) que impiden ver los datos" + (w ? " y " + w + " aviso(s)" : "") : w ? "⚠️ Los datos llegan, con " + w + " aviso(s) por corregir" : "✅ Todo en orden: los datos llegan y los nombres están bien";
+  $("hallazgos").innerHTML = H.map(h => "<div class='hall " + h.nivel + "'><span class='ico'>" + ICO[h.nivel] + "</span><div><b>" + esc(h.titulo) + "</b><small>" + esc(h.detalle) + "</small>" + (h.arreglo ? "<pre>" + esc(h.arreglo) + "</pre>" : "") + "</div></div>").join("");
+  const informe = ["INFORME DE DIAGNÓSTICO DE AGROIA", "Fecha: " + fecha(new Date()), "API: " + api + " · Canal ThingSpeak: " + canal, "", "RESULTADO: " + $("resumen").textContent, "",
+    ...H.map(h => "[" + h.nivel.toUpperCase() + "] " + h.titulo + (h.detalle ? "\n    " + h.detalle : "") + (h.arreglo ? "\n    " + h.arreglo.replace(/\n/g, "\n    ") : "")), "", "DATOS LEÍDOS", ...INF].join("\n");
+  $("informe").textContent = informe;
+  ["cResumen", "cTs", "cDb", "cLcd", "cInf"].forEach(id => { $(id).hidden = false; });
+  $("ir").disabled = false; $("ir").textContent = "Revisar de nuevo";
+}
+$("ir").onclick = revisar;
+$("copiar").onclick = async () => {
+  const t = $("informe").textContent;
+  try { await navigator.clipboard.writeText(t); } catch (e) { const a = document.createElement("textarea"); a.value = t; document.body.appendChild(a); a.select(); document.execCommand("copy"); a.remove(); }
+  $("copiado").textContent = "¡Copiado! Pégalo en el chat."; setTimeout(() => { $("copiado").textContent = ""; }, 4000);
+};
+const q = new URLSearchParams(location.search); if (q.get("api")) $("api").value = q.get("api"); if (q.get("canal")) $("canal").value = q.get("canal");
+if (q.get("auto") !== "0") revisar();
+</script>
+</body>
+</html>

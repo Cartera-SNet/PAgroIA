@@ -55,7 +55,7 @@ async function chatDatos() {
   let res;
   try { res = await tsFeeds({ results: 30 }); } catch (e) { return { error: "No pude consultar ThingSpeak en este momento. Intenta de nuevo en unos segundos." }; }
   if (!res || !res.feeds.length) return { error: "El canal de ThingSpeak todavía no tiene lecturas." };
-  const R = await tsCompletarDesdeApi(tsResumen(res.feeds)), ult = res.feeds[res.feeds.length - 1].t, hace = Math.max(0, Math.round((Date.now() - ult.getTime()) / 60000));
+  const R = tsResumen(res.feeds), ult = res.feeds[res.feeds.length - 1].t, hace = Math.max(0, Math.round((Date.now() - ult.getTime()) / 60000));
   return { R: R, ult: ult, hace: hace, antig: hace > c.minutosEnLinea ? " <i>(última lectura hace " + haceTxt(hace) + ")</i>" : "" };
 }
 // ventana de datos: la pedida; si no hay lecturas, las últimas 60 (y lo dice)
@@ -72,12 +72,10 @@ async function chatVentana(op, etiqueta) {
 const chatVars = it => it.vars.length ? it.vars : TS_MEDIDAS.map(m => m.clave);
 
 function chatFrase(clave, D) {
-  const m = tsMedida(clave), reg = D.R[clave], v = reg.ult;
+  const m = tsMedida(clave), v = D.R[clave].ult;
   if (v === null) return "No hay lecturas de " + nombreMin(m) + " todavía" + (clave === "tds" ? " (el ESP32 aún no envía el TDS al campo 4 del canal)." : ".");
   const e = chatEstado(clave, v);
-  const base = CHAT_ICONO[e] + " " + m.nombre + ": <b>" + fmtVal(m, v) + "</b> (" + (e === "normal" ? "normal " + chatRango(clave) : CHAT_TXT_ESTADO[e] + "; normal " + chatRango(clave)) + "). " + CHAT_CONSEJO[clave][e];
-  if (clave === "tds" && reg.fuente === "api") return base + " Sale de la base de datos porque el campo 4 de ThingSpeak aún no tiene lecturas.";
-  return base;
+  return CHAT_ICONO[e] + " " + m.nombre + ": <b>" + fmtVal(m, v) + "</b> (" + (e === "normal" ? "normal " + chatRango(clave) : CHAT_TXT_ESTADO[e] + "; normal " + chatRango(clave)) + "). " + CHAT_CONSEJO[clave][e];
 }
 function chatFertilidad(D) {
   const est = TS_MEDIDAS.filter(m => D.R[m.clave].ult !== null).map(m => [m.clave, chatEstado(m.clave, D.R[m.clave].ult)]);
@@ -89,19 +87,31 @@ const chip = t => '<button type="button" class="chip" data-q="' + esc(t) + '">' 
 const CHIPS_LED = chip("Enciende el LED") + " " + chip("Apaga el LED");
 
 /* ---------- orden del LED ---------- */
+/* Si el backend estaba dormido (Railway Serverless) la primera petición puede dar 502 o tardar: se reintenta unos segundos */
+window.CHAT_LED = window.CHAT_LED || { intentos: 6, esperaMs: 5000, timeoutMs: 20000 };
+let chatProgreso = null;                                       // la pantalla del chat lo usa para cambiar «Pensando…» mientras reintenta
 async function chatEnviarLed(accion) {
-  const h = { "Content-Type": "application/json" }, tk = obtenerToken();
+  const h = { "Content-Type": "application/json" }, tk = obtenerToken(), K = window.CHAT_LED;
   if (tk) h["Authorization"] = "Bearer " + tk;
   const nombre = accion === "encender_led" ? "encender el LED" : "apagar el LED";
-  try {
-    const ctl = new AbortController(), to = setTimeout(() => ctl.abort(), 12000);
-    const r = await fetch(API_BASE_URL + "/esp32/comando", { method: "POST", headers: h, body: JSON.stringify({ accion: accion }), signal: ctl.signal });
-    clearTimeout(to);
-    let d = {}; try { d = await r.json(); } catch (e) { /* sin cuerpo */ }
-    if (r.ok && d.ok !== false) return { html: "✅ Listo: envié la orden de <b>" + nombre + "</b>. El ESP32 la ejecutará cuando consulte las órdenes (en unos segundos).",
-      nota: "La orden se entrega una sola vez. Si el LED no cambia, el firmware aún no consulta /esp32/comando." };
-    return { html: "No pude enviar la orden de " + nombre + ": " + soloTexto(d.detalle || "el servidor respondió " + r.status) + ".", nota: "" };
-  } catch (e) { return { html: "No pude comunicarme con el servidor para enviar la orden. Revisa tu conexión e inténtalo de nuevo.", nota: "" }; }
+  for (let i = 0; i < K.intentos; i++) {
+    try {
+      const ctl = new AbortController(), to = setTimeout(() => ctl.abort(), K.timeoutMs);
+      const r = await fetch(API_BASE_URL + "/esp32/comando", { method: "POST", headers: h, body: JSON.stringify({ accion: accion }), signal: ctl.signal });
+      clearTimeout(to);
+      if (![502, 503, 504].includes(r.status)) {                // 502/503/504 = el servidor estaba despertando: se reintenta
+        let d = {}; try { d = await r.json(); } catch (e) { /* sin cuerpo */ }
+        if (r.ok && d.ok !== false) return { html: "✅ Listo: envié la orden de <b>" + nombre + "</b>. El ESP32 la ejecutará cuando consulte las órdenes (en unos segundos).",
+          nota: "La orden se entrega una sola vez. Si el LED no cambia, el firmware aún no consulta /esp32/comando." };
+        return { html: "No pude enviar la orden de " + nombre + ": " + soloTexto(d.detalle || "el servidor respondió " + r.status) + ".", nota: "" };
+      }
+    } catch (e) { /* sin respuesta: puede estar despertando */ }
+    if (i < K.intentos - 1) {
+      if (chatProgreso) chatProgreso("El servidor estaba dormido; despertándolo… (intento " + (i + 2) + " de " + K.intentos + ")");
+      await new Promise(res => setTimeout(res, K.esperaMs));
+    }
+  }
+  return { html: "No pude enviar la orden de " + nombre + ": el servidor tardó demasiado en despertar. Inténtalo de nuevo en un minuto.", nota: "" };
 }
 
 /* ---------- respuestas por intención ---------- */
@@ -249,8 +259,10 @@ function chatConectar(o) {
     chatBurbuja(log, "yo", soloTexto(t));
     boton.disabled = true;
     const pensando = chatBurbuja(log, "ia", "Pensando...");
+    chatProgreso = txt => { const x = pensando.querySelector(".msg-txt"); if (x) x.textContent = txt; };
     try { const r = await chatPreguntar(t); pensando.remove(); chatBurbuja(log, "ia", r.html, r.nota); }
     catch (e) { pensando.remove(); chatBurbuja(log, "ia", "No pude procesar el mensaje. Intenta de nuevo."); }
+    chatProgreso = null;
     boton.disabled = false; campo.focus({ preventScroll: true });
   }
   boton.addEventListener("click", enviar);

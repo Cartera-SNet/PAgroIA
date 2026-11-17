@@ -128,12 +128,16 @@ function montarLayout(op) {
 
 /* Estado del sistema: nivel = "ok" | "warn" | "bad" | "gris" */
 function setEstadoSistema(nivel, texto, hora) {
+  // si el último dato es viejo, se dice desde cuándo (antes solo decía la hora y parecía reciente)
+  const edad = hora ? (Date.now() - hora.getTime()) / 60000 : null;
+  const hace = m => m < 60 ? Math.max(1, Math.round(m)) + " min" : m < 1440 ? Math.floor(m / 60) + " h" : Math.floor(m / 1440) + " día(s)";
+  if (nivel === "warn" && edad !== null) texto = texto + " · hace " + hace(edad);
   const cls = "punto" + (nivel === "ok" ? "" : " " + nivel);
   [["punto-sistema", "texto-sistema"], ["punto-lateral", "estado-lateral"]].forEach(([p, t]) => {
     const pe = $(p), te = $(t); if (pe) pe.className = cls; if (te) te.textContent = texto;
   });
   const h = $("hora-lateral");
-  if (h) h.textContent = "Última actualización: " + (hora ? horaAMPM(hora) : "—");
+  if (h) h.textContent = "Última actualización: " + (hora ? (edad > 1440 ? dos(hora.getDate()) + "/" + dos(hora.getMonth() + 1) + " " : "") + horaAMPM(hora) : "—");
 }
 
 let _toastT;
@@ -143,13 +147,21 @@ function avisarToast(msg) {
   clearTimeout(_toastT); _toastT = setTimeout(() => t.classList.remove("ver"), 3400);
 }
 
+/* El backend puede estar dormido (Railway Serverless): la primera respuesta tarda o llega como 502. Se espera y se avisa. */
+window.API_VERIF = window.API_VERIF || { intentos: 5, esperaMs: 4000, timeoutMs: 15000, avisoMs: 4000 };
 async function verificarApi() {
-  try {
-    const c = new AbortController(); setTimeout(() => c.abort(), 5000);
-    const r = await fetch(`${API_BASE_URL}/iot/configuracion`, { signal: c.signal });
-    if (!r.ok) throw new Error("HTTP " + r.status);
-    setEstadoSistema("ok", "API en línea", new Date());
-  } catch (e) { setEstadoSistema("bad", "API sin conexión", null); }
+  const K = window.API_VERIF, aviso = setTimeout(() => setEstadoSistema("warn", "API despertando…", null), K.avisoMs);
+  for (let i = 0; i < K.intentos; i++) {
+    try {
+      const c = new AbortController(), t = setTimeout(() => c.abort(), K.timeoutMs);
+      const r = await fetch(`${API_BASE_URL}/iot/configuracion`, { signal: c.signal });
+      clearTimeout(t);
+      if (r.ok) { clearTimeout(aviso); setEstadoSistema("ok", "API en línea", new Date()); return; }
+      if (![502, 503, 504].includes(r.status)) break;            // un error real del servidor no se reintenta
+    } catch (e) { /* sin respuesta: puede estar despertando */ }
+    if (i < K.intentos - 1) await new Promise(res => setTimeout(res, K.esperaMs));
+  }
+  clearTimeout(aviso); setEstadoSistema("bad", "API sin conexión", null);
 }
 
 /* Ventana emergente sencilla (la usan Historial y Configuración) */

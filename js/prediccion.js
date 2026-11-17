@@ -1,7 +1,8 @@
 /* ==========================================================
    AgroIA - Predicción de fertilidad
    - Si CLASIFICADOR.url (config.js) está definido, envía los datos al modelo (Punto 3, Edge Impulse).
-   - Mientras no esté, hace una ESTIMACIÓN POR REGLAS con los rangos de RANGOS (config.js) y lo avisa en pantalla.
+   - Si no, usa el modelo de Machine Learning local (js/modelo-ml.js, árbol de decisión entrenado con Plant-Health-Data de Kaggle).
+   - (Antes de v1.8 hacía una ESTIMACIÓN POR REGLAS con los rangos de RANGOS (config.js) y lo avisaba en pantalla; las reglas ahora solo generan las recomendaciones).
    ========================================================== */
 montarLayout({ nuevo: true, estadoPropio: true });
 
@@ -67,9 +68,23 @@ montarLayout({ nuevo: true, estadoPropio: true });
              rec: Array.isArray(d.recomendaciones) && d.recomendaciones.length ? d.recomendaciones : estimarPorReglas(v).rec, origen: "modelo" };
   }
 
+  /* ---- modelo de Machine Learning local (árbol de decisión, js/modelo-ml.js) ---- */
+  function clasificarLocal(v) {
+    const r = mlPredecir({ temperatura: v.temp, humedad_aire: v.humAire, humedad_suelo: v.humSuelo });
+    const info = {
+      "Healthy": { clase: "Planta saludable", nivel: "alta", texto: "El modelo estima que las condiciones de humedad son favorables para la planta." },
+      "Moderate Stress": { clase: "Estrés moderado", nivel: "media", texto: "El modelo estima estrés moderado en la planta: conviene vigilar la humedad del suelo." },
+      "High Stress": { clase: "Estrés alto", nivel: "baja", texto: "El modelo estima estrés alto en la planta: la humedad del suelo es muy baja." }
+    }[r.clase];
+    return { clase: info.clase, nivel: info.nivel, texto: info.texto, pct: Math.round(r.prob[r.clase] * 100),
+             rec: estimarPorReglas(v).rec, origen: "ml" };
+  }
+
   function mostrar(res) {
     const color = { alta: "#0f8a4b", media: "#d97706", baja: "#dc2626" }[res.nivel];
-    const aviso = res.origen === "reglas"
+    const aviso = res.origen === "ml"
+      ? '<div class="badge-reglas" style="background:#eef7f1;border-color:#cde8d6;color:#1d5a3a">' + ico("i-check") + '<span>Modelo de Machine Learning (árbol de decisión) entrenado con el dataset <b>Plant-Health-Data</b> de Kaggle. Usa temperatura, humedad del aire y humedad del suelo; las recomendaciones y el TDS se evalúan por rangos.</span></div>'
+      : res.origen === "reglas"
       ? '<div class="badge-reglas">' + ico("i-info") + '<span>Estimación por reglas con los rangos del cultivo, <b>no es el modelo de IA</b>. Se reemplaza cuando se conecte el modelo del Punto 3 (Edge Impulse).</span></div>'
       : '<div class="badge-reglas" style="background:#eef7f1;border-color:#cde8d6;color:#1d5a3a">' + ico("i-check") + '<span>Resultado del modelo de inteligencia artificial.</span></div>';
     $("resultado").innerHTML = '<h3>Resultado de la IA</h3>' +
@@ -86,7 +101,7 @@ montarLayout({ nuevo: true, estadoPropio: true });
     if (CLASIFICADOR.url) {
       try { res = await clasificarConModelo(v); }
       catch (e) { console.error(e); avisarToast("No se pudo consultar el modelo; se usa la estimación por reglas."); res = estimarPorReglas(v); }
-    } else res = estimarPorReglas(v);
+    } else res = clasificarLocal(v);
     mostrar(res); $("analizar").disabled = false;
   }
 
@@ -94,13 +109,10 @@ montarLayout({ nuevo: true, estadoPropio: true });
     if (!tsCfg().channelId) { $("origen-datos").textContent = "Falta configurar el canal de ThingSpeak (Configuración)."; return false; }
     try {
       const res = await tsFeeds({ results: 10 }); tsPintarEstado(res);
+      const R = tsResumen(res ? res.feeds : []);
       if (!res || !res.feeds.length) { $("origen-datos").textContent = "El canal todavía no tiene lecturas."; return false; }
-      const R = await tsCompletarDesdeApi(tsResumen(res.feeds));
       CAMPOS_P.forEach(k => { if (R[k].ult !== null) $("p-" + k).value = Number(R[k].ult).toFixed(tsMedida(k).dec); });
-      const deApi = CAMPOS_P.filter(k => R[k].fuente === "api");
-      $("origen-datos").textContent = "Valores tomados de la última lectura de ThingSpeak (" + fmtFechaHora(res.feeds[res.feeds.length - 1].t) + ")." +
-        (deApi.length ? " " + deApi.map(k => tsMedida(k).nombre).join(", ") + " sale de la base de datos porque ThingSpeak aún no tiene ese campo." : "") +
-        " Puedes editarlos.";
+      $("origen-datos").textContent = "Valores tomados de la última lectura de ThingSpeak (" + fmtFechaHora(res.feeds[res.feeds.length - 1].t) + "). Puedes editarlos.";
       return true;
     } catch (e) { console.error(e); $("origen-datos").textContent = "No fue posible leer ThingSpeak."; if (!auto) avisarToast("No fue posible leer ThingSpeak."); return false; }
   }
