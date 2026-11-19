@@ -74,7 +74,7 @@ select.inp{appearance:none;-webkit-appearance:none;padding-right:34px;background
 .gcard-ext:hover{background:#f1f6f3;color:var(--verde-btn)}
 .gcard-ext .ic{width:15px;height:15px}
 .gcard-cuerpo{position:relative;height:262px;margin-top:8px}
-.gcard-cuerpo iframe{position:absolute;inset:0;width:100%;height:100%;border:0;border-radius:6px}
+.gcard-cuerpo iframe{position:absolute;left:0;top:0;width:100%;height:100%;border:0;border-radius:6px}
 .donut-cuerpo{flex:1;display:grid;place-items:center;padding:8px 0 0}
 .donut{width:152px;height:152px}
 .nivel{display:flex;align-items:center;justify-content:center;gap:7px;margin-top:6px;font-size:13px;font-weight:600;color:#15803d}
@@ -451,3 +451,29 @@ html.embed .btn-mic,html.embed .btn-voz{width:40px;height:42px}
 html.embed .chips{flex-wrap:nowrap;overflow-x:auto;padding:0 12px 8px;scrollbar-width:thin}
 html.embed .chips .chip{white-space:nowrap;flex:none}
 html.embed .agro-estado,html.embed .agro-estado.on{padding-left:12px;padding-right:12px}
+
+/* ---------- Gráficas: columnas según el ANCHO REAL disponible (con o sin menú lateral, en cualquier pantalla) ----------
+   ThingSpeak corta su gráfico si el cuadro es más angosto de ~420 px (js/ts.js lo reduce con scale si hace falta);
+   por eso se usan 4 / 2 / 1 columnas según el espacio que de verdad queda, no según el ancho de la ventana. */
+.cq{container-type:inline-size;min-width:0}
+@container (min-width:1600px){ .graficas{grid-template-columns:repeat(4,minmax(0,1fr))} }
+@container (min-width:1540px){ .graficas-rt{grid-template-columns:repeat(4,minmax(0,1fr))} }
+@container (min-width:760px) and (max-width:1599px){ .graficas{grid-template-columns:repeat(2,minmax(0,1fr))} }
+@container (min-width:760px) and (max-width:1539px){ .graficas-rt{grid-template-columns:repeat(2,minmax(0,1fr))} }
+@container (max-width:759px){ .graficas,.graficas-rt{grid-template-columns:minmax(0,1fr);gap:12px} .evo.evo-grid{grid-template-columns:minmax(0,1fr)} }
+@container (min-width:760px){ .evo.evo-grid:not(.uno){grid-template-columns:repeat(2,minmax(0,1fr))} }
+
+/* ---------- Historial: comparación de fuentes y aviso de carga ---------- */
+.cmp[hidden]{display:none}
+.cmp h3{font-size:14px;margin-bottom:8px}
+.cmp-estado{font-size:12.5px;font-weight:600;line-height:1.35;padding:8px 10px;border-radius:8px;margin-bottom:8px}
+.cmp-estado.ok{background:#eaf7ef;color:#15803d}
+.cmp-estado.warn{background:#fff6e5;color:#a35a00}
+.cmp-tabla{width:100%;border-collapse:collapse;font-size:12px}
+.cmp-tabla th,.cmp-tabla td{padding:5px 4px;text-align:right;border-bottom:1px solid var(--borde);white-space:nowrap}
+.cmp-tabla thead th{font-weight:600;color:var(--gris);font-size:11px;text-align:right;white-space:normal;vertical-align:bottom}
+.cmp-sub{margin:0 0 6px}
+.cmp-tabla tbody th{text-align:left;font-weight:500;color:#33475a;white-space:normal}
+.cmp-nota{font-size:11.5px;color:var(--gris);margin-top:8px;line-height:1.35}
+.tabla-cargando{text-align:center;color:#5f7081;padding:22px}
+.btn-otra{margin-top:10px}

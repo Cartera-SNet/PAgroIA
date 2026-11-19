@@ -17,7 +17,7 @@
       <h1>Historial de datos</h1>
       <p>Consulta y analiza el historial de mediciones de los sensores del suelo y del ambiente. Filtra por fecha, parámetro y visualiza la información en gráficos y tablas.</p>
     </div>
-    <div class="banner-badge"><span class="bb-ico" id="h-bb"></span><div><b>AgroIA</b><small>Datos reales desde <span id="h-fuente-txt">ThingSpeak</span> <i class="punto gris" id="h-punto"></i></small></div></div>
+    <div class="banner-badge"><span class="bb-ico" id="h-bb"></span><div><b>AgroIA</b><small>Datos reales desde <span id="h-fuente-txt">la base de datos</span> <i class="punto gris" id="h-punto"></i></small></div></div>
   </section>
 
   <section class="filtros">
@@ -41,7 +41,7 @@
     <button type="button" data-dias="6">7 días</button><button type="button" data-dias="29">30 días</button>
     <label class="rr-fuente" for="f-fuente">Fuente de datos
       <select class="inp inp-peq" id="f-fuente" title="De dónde se leen los datos del historial">
-        <option value="ts" selected>ThingSpeak</option><option value="bd">Base de datos</option>
+        <option value="bd" selected>Base de datos</option><option value="ts">ThingSpeak</option>
       </select></label>
     <small id="h-fuente-nota"></small>
   </div>
@@ -52,7 +52,7 @@
         <div class="tabla-reg-cab">
           <div><h3>Historial de registros</h3><p class="sub" id="tabla-sub">Cargando...</p></div>
           <label class="tabla-ctrl">Filas por página
-            <select class="inp inp-peq" id="f-filas"><option value="10" selected>10</option><option value="25">25</option><option value="50">50</option></select></label>
+            <select class="inp inp-peq" id="f-filas"><option value="10" selected>10</option><option value="25">25</option><option value="50">50</option><option value="100">100</option></select></label>
         </div>
         <div class="tabla-scroll"><table class="tabla-reg">
           <thead><tr><th id="th-fecha">Fecha y hora</th><th id="th-temp"></th><th id="th-humAire"></th><th id="th-humSuelo"></th><th id="th-tds"></th><th></th></tr></thead>
@@ -60,13 +60,17 @@
         <p class="tabla-leyenda"><span class="ley-fuera"></span> Los valores en naranja están fuera del rango normal del cultivo. Un guion (—) significa que no hubo lectura.</p>
         <div class="tabla-pie"><div class="pag" id="pag"></div><span class="pag-info" id="pag-info"></span></div>
       </section>
-      <section class="panel">
+      <section class="panel cq">
         <div class="panel-cab"><h3>Evolución de variables</h3><span class="sub" id="evo-sub">Gráficos para el rango elegido</span></div>
         <div class="evo" id="evo"></div>
       </section>
     </div>
     <div class="apilado">
       <section class="kpis kpis-lado" id="kpis"></section>
+      <section class="panel cmp" id="cmp" hidden>
+        <h3>Comparación de fuentes</h3>
+        <div id="cmp-cuerpo"></div>
+      </section>
       <section class="panel">
         <div class="fr-cab"><h3>Filtros rápidos</h3><button id="fr-reset" title="Restablecer filtros" aria-label="Restablecer filtros"></button></div>
         <div class="fr-lista" id="fr-lista"></div>

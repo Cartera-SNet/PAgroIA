@@ -114,16 +114,51 @@ function tsPintarEstado(res) {
   setEstadoSistema(ok ? "ok" : "warn", ok ? "Sistema en línea" : "Sin datos recientes", ult);
 }
 
-/* Pone un iframe de ThingSpeak en un contenedor (o un aviso si falta el canal) */
+/* Ancho mínimo con el que ThingSpeak dibuja bien su gráfico: por debajo de esto lo corta por la derecha (se veía con el menú lateral
+   abierto y en celulares). Si la tarjeta es más angosta, el iframe se dibuja a este ancho y se reduce con CSS (scale) para que quepa completo. */
+const TS_ANCHO_MIN = 420;
+
+/* Ajusta el iframe al tamaño actual de su tarjeta. Devuelve el ancho con el que ThingSpeak dibuja el gráfico. */
+function tsAjustarIframe(cont) {
+  const f = cont.querySelector("iframe"); if (!f) return 0;
+  const w = cont.clientWidth, h = cont.clientHeight;
+  if (!w || !h) return 0;
+  if (w < TS_ANCHO_MIN) {
+    const k = w / TS_ANCHO_MIN;
+    f.style.width = TS_ANCHO_MIN + "px"; f.style.height = Math.round(h / k) + "px";
+    f.style.transform = "scale(" + k.toFixed(4) + ")"; f.style.transformOrigin = "0 0";
+    return TS_ANCHO_MIN;
+  }
+  f.style.width = f.style.height = f.style.transform = f.style.transformOrigin = "";
+  return w;
+}
+
+/* Pone un iframe de ThingSpeak en un contenedor (o un aviso si falta el canal).
+   El gráfico se dibuja con el ancho que tiene al cargar: si la tarjeta cambia de ancho después (menú lateral que se abre o se
+   cierra, ventana que se agranda), se vuelve a cargar con el ancho nuevo (espera 0,4 s para no parpadear mientras se arrastra). */
 function tsMontarIframe(cont, m, o) {
   const url = tsChartUrl(m, o);
+  if (cont._tsObs) { cont._tsObs.disconnect(); cont._tsObs = null; }
+  clearTimeout(cont._tsT);
   cont.innerHTML = "";
   if (!url) {
     cont.innerHTML = '<div class="graf-aviso">Falta configurar el canal de ThingSpeak.<br><a href="' + RAIZ + 'pages/configuracion.html">Ir a Configuración</a></div>';
     return "";
   }
   const f = document.createElement("iframe");
-  f.title = m.nombre + " (ThingSpeak)"; f.loading = "lazy"; f.setAttribute("scrolling", "no"); f.src = url;
+  f.title = m.nombre + " (ThingSpeak)"; f.loading = "lazy"; f.setAttribute("scrolling", "no");
   cont.appendChild(f);
+  let ancho = tsAjustarIframe(cont);
+  f.src = url;
+  if (typeof ResizeObserver === "function") {
+    cont._tsObs = new ResizeObserver(() => {
+      if (!cont.isConnected) return;
+      const nuevo = tsAjustarIframe(cont);              // lo reduce o lo estira al instante
+      if (!nuevo || Math.abs(nuevo - ancho) < 8) return;
+      clearTimeout(cont._tsT);
+      cont._tsT = setTimeout(() => { if (cont.isConnected && cont.querySelector("iframe") === f) tsMontarIframe(cont, m, o); }, 400);
+    });
+    cont._tsObs.observe(cont);
+  }
   return url;
 }
