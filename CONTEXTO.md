@@ -2,7 +2,7 @@
 
 | | |
 |---|---|
-| **Versión del documento** | **v1.14** |
+| **Versión del documento** | **v1.17** |
 | **Última actualización** | 19 de noviembre de 2026 |
 | **Proyecto** | AgroIA — Diagnóstico de fertilidad del suelo |
 | **Asignatura** | Inteligencia Artificial 26-2 · CUL · Docente: Bryan Josser Fernández Ebrath |
@@ -156,6 +156,7 @@ Los nombres antiguos («Temperatura», «Humedad ambiental», «TDS del suelo»,
   - Orden de respuesta: reglas locales → servidor `POST /chat` solo si no entendió (hoy no existe) → «¿quisiste decir…?» con botones tocables.
 - **Preparado para una API dormida (v1.6):** `chatEnviarLed` reintenta la orden del LED (hasta 6 intentos, cada 5 s, 20 s por intento) y avisa «El servidor estaba dormido; despertándolo…» si el servidor devuelve 502/503/504 o no responde; un error real (400, 500) no se reintenta. `verificarApi` (indicador de la barra superior, solo en la pantalla **Chat** y las pantallas antiguas) espera y dice «API despertando…» en vez de «API sin conexión» en rojo. Inicio, Monitoreo, Historial, Predicción y Configuración **no consultan la API al abrirse** (leen ThingSpeak). Los tiempos se pueden cambiar con `window.CHAT_LED` y `window.API_VERIF`.
 - **Detalle menor pendiente:** el comentario de `serve.py` todavía dice «backend en Render» (solo es un comentario).
+- **Teclado LCD (v1.17):** pantalla nueva en la barra lateral (`pages/teclado.html`, `js/teclado.js`) con el teclado del menú LCD de José, una pantalla LCD simulada, el LED (tecla 0) y una consola. Detalle en §20 (v1.17).
 - **Móvil:** barra inferior *Inicio · Monitoreo · Análisis (→ `pages/vision.html`) · Historial · Más*. La cámara en vivo abre la trasera y tiene el botón «Cambiar cámara».
 - **Ocultas (no borradas):** Telemetría InfluxDB, Análisis integrado, Reportes PDF, Control IoT.
 - **Railway:** `railway.json` con `sleepApplication: true` (ver §10). `requirements.txt` vacío a propósito.
@@ -370,8 +371,8 @@ Cada **60 s** lee los datos **filtrados por variable** y los envía a dispositiv
 
 | Pieza | Versión / estado | Runtime | Dependencias principales |
 |---|---|---|---|
-| Documento | v1.14 | — | — |
-| Frontend | build v1.14 (página 10.8: asistente **Agro** con IA y voz, Historial con fuente de datos, inicio «Saluda a Agro») | HTML/CSS/JS sin librerías; `serve.py` (Python 3) | `requirements.txt` vacío a propósito |
+| Documento | v1.17 | — | — |
+| Frontend | build v1.17 (página 10.9: asistente **Agro** con IA y voz, Historial con fuente de datos, inicio «Saluda a Agro», pantalla **Teclado LCD**, `serve.py` con hilos) | HTML/CSS/JS sin librerías; `serve.py` (Python 3) | `requirements.txt` vacío a propósito |
 | Backend | código del equipo (`bbf1923`) + 3 archivos (v1.6) | `python:3.12-slim` (Dockerfile) | `fastapi==0.115.12`, `uvicorn==0.34.2`, `starlette==0.46.2`, `SQLAlchemy==2.0.40`, `psycopg2-binary==2.9.12`, `pydantic==2.11.3`, `python-jose==3.5.0`, `python-multipart==0.0.32`, `python-dotenv==1.1.0`, `google-auth==2.59.0`, `httpx==0.28.1`, `requests==2.34.2`, `numpy==2.5.3`, `pillow==12.3.0`, `opencv-python-headless==4.10.0.84`, `reportlab==5.0.1`, `torch==2.14.0`, `torchvision==0.29.0`, `ultralytics==8.4.163`, `ultralytics-platform==0.1.65`, `ultralytics-thop==2.1.6` (70 líneas en total) |
 | Bot de Telegram | v2 (+corrector, LED, TDS, reintentos) | Railpack de Railway (la versión de Python del bot: *por confirmar*) | `python-telegram-bot[webhooks]`, `requests`, `python-dotenv`, `groq` (sin versión fijada) |
 | Puente Sinric | v2 (+`USAR_API=0`) | Railpack 0.43.0, Python 3.13.16 | `requests`, `sinricpro` |
@@ -511,12 +512,31 @@ npm i puppeteer-core @sparticuz/chromium     # navegador sin pantalla para proba
 1. **Sube a la conversación nueva:** este archivo (`AgroIA_CONTEXTO.md`) y, si va a tocar código, los zips que correspondan (`AgroIABackend_completo_sleep.zip`, `AgroIA_frontend_web.zip`, `AgroIA_bot_telegram.zip`, `AGROIA-ASISTENTE_sinric_sin_API.zip`). Las capturas de Railway o ThingSpeak ayudan mucho.
 2. **Pega este prompt:**
 
-> Hola. Continúo el proyecto **AgroIA** (IA 26-2, CUL). Soy Víctor y hablo español de Colombia. Adjunto `AgroIA_CONTEXTO.md` (v1.14): es toda la memoria del proyecto. **Léelo completo antes de responder** y sigue sus **reglas de trabajo (§17)**. Primero resúmeme en 10 líneas dónde estamos y qué es lo más urgente, y espera mi instrucción: **no cambies nada sin mi aprobación**. Cuando entregues archivos, adjúntalos, no incluyas claves y verifica desde el zip final descomprimido. Mantén el documento actualizado (§13).
+> Hola. Continúo el proyecto **AgroIA** (IA 26-2, CUL). Soy Víctor y hablo español de Colombia. Adjunto `AgroIA_CONTEXTO.md` (v1.17): es toda la memoria del proyecto. **Léelo completo antes de responder** y sigue sus **reglas de trabajo (§17)**. Primero resúmeme en 10 líneas dónde estamos y qué es lo más urgente, y espera mi instrucción: **no cambies nada sin mi aprobación**. Cuando entregues archivos, adjúntalos, no incluyas claves y verifica desde el zip final descomprimido. Mantén el documento actualizado (§13).
 
 3. **Primeras cosas que probablemente pida el usuario:** montar Sinric de nuevo, cambiar claves, subir los zips, ayudar a José con el firmware, aprobar «alertas», proteger la API, preparar la presentación.
 4. **Aviso para el asistente nuevo:** no tiene acceso a la API ni a Railway del usuario; trabaja con lo que el usuario pega o con capturas. Los scripts de prueba anteriores no existen (§16).
 
 ## 20. Registro de cambios (lo más reciente arriba)
+
+### v1.17 — 19 nov 2026 — Pantalla «Teclado LCD» en la página (10.9)
+- **Pedido de Víctor (aprobado: «Aprobado teclado en la página»):** tener en la página el teclado del menú LCD de José (tabla: teclas 1–9, 0, A, B) con sus opciones, el LED y una consola; el teclado y el LED **físicos no cambian**.
+- **Qué se agregó (solo la página; backend, firmware, bot y Sinric no cambian):** `pages/teclado.html`, `js/teclado.js`, un ícono (`i-teclado` en `js/iconos.js`), la opción «Teclado LCD» en la barra lateral (`js/layout.js`: entrada en `NAV` y un atajo del buscador) y estilos `.tec-*` al final de `css/app.css`. `VERSION_PAGINA` = 10.9.
+- **Cómo funciona:** teclado de 12 teclas (también con el teclado del PC; no actúa si se escribe en un campo), pantalla LCD simulada de 2×16 caracteres, detalle y consola con hora, tecla y origen. **Teclas 2–7 y A:** `GET /menu/ultimo-registro`, `promedio-24h`, `max-min-hoy`, `promedio-por-hora`, `muestras-por-dia`, `dias-bajo-umbral` y `desviacion` (la respuesta `{linea1, linea2, detalle}` se muestra tal cual). **Teclas 1, 8, 9:** se calculan con la última lectura de ThingSpeak (lectura actual; alerta si el suelo < 30 %; °C → °F); no llaman a la API. **Tecla 0:** abre un panel con «Encender LED» y «Apagar LED» (`POST /esp32/comando`, como el chat; pulsar 0 **no** envía nada; la orden se entrega una sola vez cuando el ESP32 la consulta; la página no sabe si el LED quedó encendido). **Tecla B (WiFi e IP):** «No disponible», porque el ESP32 no las envía.
+- **API dormida:** 502/503/504 o sin respuesta → reintenta hasta 6 veces (5 s entre intentos, 20 s por intento) y avisa «Despertando…»; un error real (por ejemplo 500) se muestra y no se reintenta.
+- **Probado (navegador sin pantalla, API y ThingSpeak simulados, sobre el zip final descomprimido):** 46/46 pantalla nueva (las 9 teclas con su ruta, LED, B, teclado del PC, buscador, consola, API dormida, error 500) y sin regresión: Agro 46/46, Historial 41/41, orden de tarjetas y TDS sin errores, 0 páginas con errores de JavaScript. **No probado:** con la API real (los textos reales de `/menu/*` dependen de lo que devuelva producción) ni con el ESP32 real (que el LED físico responda sigue dependiendo del firmware).
+- **Ojo:** las teclas de la página y las del ESP32 son independientes: lo que se pulsa en la página **no** aparece en el LCD físico (salvo el LED, que sí lo ejecuta el ESP32 al recoger la orden).
+
+### v1.16 — 19 nov 2026 — La página (PAgroIA) dejaba de responder: `serve.py` ahora usa hilos
+- **Síntoma (11:08):** `agroia-suelo.up.railway.app` mostró «Application failed to respond». Los *Network Logs* mostraron `502` de 15 s en **todas** las peticiones tras servir `/pages/chat.html` (10:53); los *Deploy Logs* no tenían ningún error y el despliegue seguía «Active».
+- **Causa:** `serve.py` usaba `socketserver.TCPServer`, que atiende **una conexión a la vez**. Si el navegador (o Railway) abre una conexión y no envía nada, el servidor se queda esperando en ella y bloquea a todos los demás. Reproducido en el sandbox: con una conexión muda abierta, el servidor viejo no responde (timeout) y el nuevo sí (200).
+- **Arreglo (solo `serve.py` del frontend):** `ThreadingTCPServer` con `daemon_threads = True` (cada conexión en su hilo). Nada más cambia. **Hay que subirlo a GitHub** (repo de la página) y esperar «Active». Mientras tanto, **Restart** del servicio en Railway lo recupera (hasta que vuelva a pasar).
+- Nota: este defecto existía desde antes; el modo dormir de Railway no era la causa.
+
+### v1.15 — 19 nov 2026 — Respuestas de Agro más cortas
+- **Pedido de Víctor:** que los saludos sean cortos y al punto; que Agro se extienda solo cuando le piden explicar algo que lo amerite.
+- **Cambio (solo `agro-proxy/worker.js`; web y backend no cambian):** el prompt de Agro ahora pide: saludo o charla corta («hola», «cómo vas», «gracias», «quién eres») = **una sola frase de máximo 15 palabras**, sin soltar datos de sensores; pregunta puntual = 1–2 frases; explicación o recomendación = hasta 5–6 frases. Probado: Worker 36/36 (las pruebas no ejecutan la IA real). **Hay que volver a pegar el Worker en Cloudflare** (Edit code → pegar → Deploy) para que se note; el estilo real de las respuestas se confirma en el chat.
+- Las respuestas locales de saludo del chat (sin IA) no cambian.
 
 ### v1.14 — 19 nov 2026 — Agro enfocado en la fertilidad y con conocimiento del proyecto
 - **Pedido de Víctor:** que el asistente se base en la **fertilidad del suelo** y «lea todo el programa» (frontend, backend, todo), muy bien entrenado.

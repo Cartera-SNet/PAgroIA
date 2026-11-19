@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🌱</text></svg>">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Teclado LCD · AgroIA</title>
+<link rel="stylesheet" href="../css/shell.css">
+<link rel="stylesheet" href="../css/app.css">
+</head>
+<body>
+<aside id="sidebar"></aside>
+<main>
+  <div class="chat-pag-cab" id="tec-cab"><div><h1>Teclado del menú LCD</h1><p>El mismo menú del ESP32, desde la página. No cambia el teclado ni la pantalla físicos.</p></div></div>
+  <section class="tec-grid">
+    <div class="tec-col">
+      <div class="tec-panel">
+        <h2>Teclado</h2>
+        <div class="tec-teclas" id="tec-teclas" role="group" aria-label="Teclado del menú"></div>
+        <p class="tec-ayuda">También puedes usar las teclas 0 a 9, A y B de tu teclado.</p>
+      </div>
+    </div>
+    <div class="tec-col">
+      <div class="tec-panel">
+        <h2>Pantalla LCD</h2>
+        <div class="tec-lcd" id="tec-lcd" aria-live="polite"><div id="tec-l1">Pulsa una tecla</div><div id="tec-l2"></div></div>
+        <p class="tec-detalle" id="tec-detalle">Elige una opción del teclado.</p>
+        <div class="tec-led" id="tec-led" hidden>
+          <b>Tecla 0 · LED del ESP32</b>
+          <div class="tec-led-bt"><button type="button" class="btn-p" id="led-on">Encender LED</button><button type="button" class="btn-s" id="led-off">Apagar LED</button></div>
+          <small>La orden se entrega una sola vez, cuando el ESP32 consulta las órdenes (en unos segundos). La página no puede saber si el LED quedó encendido o apagado.</small>
+        </div>
+      </div>
+      <div class="tec-panel">
+        <div class="tec-cons-cab"><h2>Consola</h2><button type="button" class="btn-s" id="tec-limpiar">Limpiar</button></div>
+        <div class="tec-consola" id="tec-consola" aria-live="polite"><div class="tec-vacio">Aquí aparece cada consulta que haces.</div></div>
+      </div>
+    </div>
+  </section>
+</main>
+<script src="../js/config.js"></script>
+<script src="../js/api.js"></script>
+<script src="../js/auth.js"></script>
+<script src="../js/iconos.js"></script>
+<script src="../js/ts.js"></script>
+<script src="../js/charts.js"></script>
+<script src="../js/ui.js"></script>
+<script src="../js/layout.js"></script>
+<script src="../js/teclado.js"></script>
+</body>
+</html>

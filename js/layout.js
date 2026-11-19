@@ -11,6 +11,7 @@ const NAV = [
   { k: "historial",  t: "Historial de datos",       i: "i-doc",   h: "pages/historial.html",     p: ["historial.html", "alertas.html"] },
   { k: "prediccion", t: "Predicción de fertilidad", i: "i-brain", h: "pages/prediccion.html",    p: ["prediccion.html", "vision.html", "camara.html"] },
   { k: "chat",       t: "Chat con Agro",            i: "i-chat",  h: "pages/chat.html",          p: ["chat.html"] },
+  { k: "teclado",    t: "Teclado LCD",              i: "i-teclado", h: "pages/teclado.html",     p: ["teclado.html"] },
   { k: "config",     t: "Configuración",            i: "i-gear",  h: "pages/configuracion.html", p: ["configuracion.html"] }
 ];
 // Pestañas internas de las opciones que agrupan varias páginas.
@@ -25,7 +26,7 @@ const ATAJOS = [
   [/inicio|home|panel/, "dashboard.html"], [/temp|humedad|tds|ph\b|tiempo real|monitor/, "pages/monitoreo.html"],
   [/hist|fecha|muestra|dato|csv/, "pages/historial.html"], [/alert/, "pages/alertas.html"],
   [/predic|fertil|clasif/, "pages/prediccion.html"], [/imagen|yolo|camara|cámara/, "pages/vision.html"],
-  [/chat|mensaje|comando/, "pages/chat.html"], [/config|iot|esp|teclado|intervalo|canal/, "pages/configuracion.html"]
+  [/teclado|lcd|menu lcd/, "pages/teclado.html"], [/chat|mensaje|comando/, "pages/chat.html"], [/config|iot|esp|teclado|intervalo|canal/, "pages/configuracion.html"]
 ];
 
 function montarLayout(op) {
