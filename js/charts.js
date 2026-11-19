@@ -62,7 +62,7 @@ function lineaMulti(cont, op) {
     const y = mg.t + (ih / 4) * i;
     svg.appendChild(svgEl("line", { x1: mg.l, x2: W - mg.r, y1: y, y2: y, stroke: i === 4 ? "#c9d3cd" : "#e8eeea", "stroke-width": 1 }));
     svg.appendChild(svgEl("text", { x: mg.l - 8, y: y + 4, "text-anchor": "end", "font-size": 11, fill: gris }, Math.round(izq.max - ((izq.max - izq.min) / 4) * i)));
-    svg.appendChild(svgEl("text", { x: W - mg.r + 8, y: y + 4, "text-anchor": "start", "font-size": 11, fill: gris }, (der.max - ((der.max - der.min) / 4) * i).toFixed(1)));
+    if (!op.sinDer) svg.appendChild(svgEl("text", { x: W - mg.r + 8, y: y + 4, "text-anchor": "start", "font-size": 11, fill: gris }, (der.max - ((der.max - der.min) / 4) * i).toFixed(1)));
   }
   svg.appendChild(svgEl("rect", { x: mg.l, y: mg.t, width: iw, height: ih, fill: "none", stroke: "#d5ded8" }));
 

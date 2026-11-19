@@ -2,7 +2,7 @@
 
 | | |
 |---|---|
-| **Versión del documento** | **v1.9** |
+| **Versión del documento** | **v1.11** |
 | **Última actualización** | 17 de noviembre de 2026 |
 | **Proyecto** | AgroIA — Diagnóstico de fertilidad del suelo |
 | **Asignatura** | Inteligencia Artificial 26-2 · CUL · Docente: Bryan Josser Fernández Ebrath |
@@ -369,8 +369,8 @@ Cada **60 s** lee los datos **filtrados por variable** y los envía a dispositiv
 
 | Pieza | Versión / estado | Runtime | Dependencias principales |
 |---|---|---|---|
-| Documento | v1.9 | — | — |
-| Frontend | build v1.9 (página 10.3: v1.8 + administración en Configuración) | HTML/CSS/JS sin librerías; `serve.py` (Python 3) | `requirements.txt` vacío a propósito |
+| Documento | v1.11 | — | — |
+| Frontend | build v1.11 (página 10.5: administración, Alertas con ThingSpeak y TDS desde la base de datos) | HTML/CSS/JS sin librerías; `serve.py` (Python 3) | `requirements.txt` vacío a propósito |
 | Backend | código del equipo (`bbf1923`) + 3 archivos (v1.6) | `python:3.12-slim` (Dockerfile) | `fastapi==0.115.12`, `uvicorn==0.34.2`, `starlette==0.46.2`, `SQLAlchemy==2.0.40`, `psycopg2-binary==2.9.12`, `pydantic==2.11.3`, `python-jose==3.5.0`, `python-multipart==0.0.32`, `python-dotenv==1.1.0`, `google-auth==2.59.0`, `httpx==0.28.1`, `requests==2.34.2`, `numpy==2.5.3`, `pillow==12.3.0`, `opencv-python-headless==4.10.0.84`, `reportlab==5.0.1`, `torch==2.14.0`, `torchvision==0.29.0`, `ultralytics==8.4.163`, `ultralytics-platform==0.1.65`, `ultralytics-thop==2.1.6` (70 líneas en total) |
 | Bot de Telegram | v2 (+corrector, LED, TDS, reintentos) | Railpack de Railway (la versión de Python del bot: *por confirmar*) | `python-telegram-bot[webhooks]`, `requests`, `python-dotenv`, `groq` (sin versión fijada) |
 | Puente Sinric | v2 (+`USAR_API=0`) | Railpack 0.43.0, Python 3.13.16 | `requests`, `sinricpro` |
@@ -510,12 +510,26 @@ npm i puppeteer-core @sparticuz/chromium     # navegador sin pantalla para proba
 1. **Sube a la conversación nueva:** este archivo (`AgroIA_CONTEXTO.md`) y, si va a tocar código, los zips que correspondan (`AgroIABackend_completo_sleep.zip`, `AgroIA_frontend_web.zip`, `AgroIA_bot_telegram.zip`, `AGROIA-ASISTENTE_sinric_sin_API.zip`). Las capturas de Railway o ThingSpeak ayudan mucho.
 2. **Pega este prompt:**
 
-> Hola. Continúo el proyecto **AgroIA** (IA 26-2, CUL). Soy Víctor y hablo español de Colombia. Adjunto `AgroIA_CONTEXTO.md` (v1.9): es toda la memoria del proyecto. **Léelo completo antes de responder** y sigue sus **reglas de trabajo (§17)**. Primero resúmeme en 10 líneas dónde estamos y qué es lo más urgente, y espera mi instrucción: **no cambies nada sin mi aprobación**. Cuando entregues archivos, adjúntalos, no incluyas claves y verifica desde el zip final descomprimido. Mantén el documento actualizado (§13).
+> Hola. Continúo el proyecto **AgroIA** (IA 26-2, CUL). Soy Víctor y hablo español de Colombia. Adjunto `AgroIA_CONTEXTO.md` (v1.11): es toda la memoria del proyecto. **Léelo completo antes de responder** y sigue sus **reglas de trabajo (§17)**. Primero resúmeme en 10 líneas dónde estamos y qué es lo más urgente, y espera mi instrucción: **no cambies nada sin mi aprobación**. Cuando entregues archivos, adjúntalos, no incluyas claves y verifica desde el zip final descomprimido. Mantén el documento actualizado (§13).
 
 3. **Primeras cosas que probablemente pida el usuario:** montar Sinric de nuevo, cambiar claves, subir los zips, ayudar a José con el firmware, aprobar «alertas», proteger la API, preparar la presentación.
 4. **Aviso para el asistente nuevo:** no tiene acceso a la API ni a Railway del usuario; trabaja con lo que el usuario pega o con capturas. Los scripts de prueba anteriores no existen (§16).
 
 ## 20. Registro de cambios (lo más reciente arriba)
+
+### v1.11 — 18 nov 2026 — TDS del tablero desde la base de datos
+- **Problema:** el TDS llega a la base de datos (Sensor_Id 5) pero no a ThingSpeak `field4`; el tablero solo leía ThingSpeak. Nada de lo que hay en el backend, la web, el bot o Sinric escribe en ThingSpeak (solo leen); quien lo alimenta (campos 1–3) es algo externo: otra versión del firmware o el backend viejo de Render. **Pendiente de averiguar con José.** El código de José que se revisó (MQTT + `POST /muestras/create` a Render) no tiene ThingSpeak.
+- **Cambio (solo frontend, página 10.5):** nuevo `js/tds-bd.js`; `js/dashboard.js` usa la base de datos (`GET /muestras/list`, filtra Sensor_Id 5, pide como mucho 1 vez por minuto) **solo si ThingSpeak no trae el campo 4**: tarjeta con el último valor, gráfica propia y etiqueta «Campo 4 · Base de datos». Si ThingSpeak vuelve a traer TDS, regresa solo a la gráfica oficial. `js/charts.js`: opción `sinDer`.
+- **Límite conocido:** `/muestras/list` devuelve **toda** la tabla; con el tiempo será pesado. Mejora futura (requiere cambiar el backend y aprobación): filtro `?sensor_id=&limite=`.
+- **Probado:** Chrome sin interfaz con datos simulados (caso base de datos y caso ThingSpeak normal, sin errores de JavaScript). No probado en el sitio real.
+- **Aviso de seguridad:** la Write API Key de ThingSpeak se mostró en capturas y en texto pegado en el chat: hay que **generar una nueva** (después de saber quién envía, para actualizarla allí).
+- **Si el ESP32 manda a Render y no a Railway,** la pausa de recepción (v1.9) no lo frena.
+
+### v1.10 — 18 nov 2026 — Alertas leen de ThingSpeak
+- **Problema:** la página Alertas mostraba «No fue posible obtener la telemetría» porque pedía los datos a `/iot/ultima-medicion`, que necesita InfluxDB (no existe en la nube).
+- **Arreglo (frontend, página 10.4):** `js/alertas.js` ahora lee los datos en vivo de ThingSpeak (igual que el tablero). Las alertas del backend no cambian. Solo el frontend; backend, bot y Sinric sin cambios de código.
+- **Probado:** con datos simulados (humedad baja, temperatura alta, TDS sin dato). No probado en el sitio real.
+- **Observado hoy:** el ESP32 vuelve a enviar; la BD recibe el TDS (Sensor_Id 5; primero 0, luego 99) pero ThingSpeak `field4` sigue vacío: el firmware no lo envía a ese campo (pendiente de José).
 
 ### v1.9 — 18 nov 2026 — Respaldo de la base de datos y pausa de recepción
 - **Pedido de Víctor (dos ideas):** (1) botón para exportar un respaldo de la base de datos protegido con una clave maestra; (2) forma de apagar el envío de datos a la base de datos hasta que se vuelva a encender. Aprobado con «Aprobado respaldo y pausa».

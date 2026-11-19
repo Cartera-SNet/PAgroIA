@@ -3,14 +3,20 @@ montarLayout();
 const ALERTAS_ENDPOINT = "/alertas/list";
 async function cargar() {
   try {
-    const m = await leerMedicion(), out = [];
-    CAMPOS.forEach(([k,n,u]) => { const v = m[k];
+    // Los datos en vivo vienen de ThingSpeak (igual que el tablero); /iot/ultima-medicion necesita InfluxDB, que no existe.
+    const res = await tsFeeds({ results: tsCfg().resultados }), out = [];
+    if (!res) throw new Error("Sin canal de ThingSpeak configurado");
+    const R = tsResumen(res.feeds);
+    const m = { humedad_suelo: R.humSuelo.ult, temp_aire: R.temp.ult, humedad_aire: R.humAire.ult, tds: R.tds.ult };
+    const CLAVES = { humedad_suelo: "humSuelo", temp_aire: "temp", humedad_aire: "humAire", tds: "tds" };
+    CAMPOS.filter(([k]) => CLAVES[k]).forEach(([k,n,u]) => { const v = m[k];
       if (v == null) out.push(`Sensor sin datos: ${n}`);
       else if (estadoValor(k, Number(v)) !== "ok") out.push(`${n} fuera del rango (${v} ${u})`.trim()); });
-    if (!m.time || (Date.now() - new Date(m.time)) > 120000) out.push("ESP32 sin datos recientes");
+    const ultima = res.feeds.length ? res.feeds[res.feeds.length - 1].t : null;
+    if (!ultima || (Date.now() - ultima) > 120000) out.push("ESP32 sin datos recientes");
     $("locales").innerHTML = out.length ? out.map(t => `<div class="det">⚠ ${esc(t)}</div>`).join("") : '<span class="ok-msg">Sin alertas: todas las variables están en rango.</span>';
     limpiarAviso();
-  } catch (e) { avisar("No fue posible obtener la telemetría. Verifique que el backend esté funcionando.", e); }
+  } catch (e) { avisar("No fue posible obtener los datos de ThingSpeak. Verifique su conexión y el canal.", e); }
   if (!ALERTAS_ENDPOINT) { $("remotas").innerHTML = '<div class="aviso info">ENDPOINT PENDIENTE: defina ALERTAS_ENDPOINT en js/alertas.js según /docs.</div>'; return; }
   try {
     const d = await apiJson(ALERTAS_ENDPOINT), lista = Array.isArray(d) ? d : (d.alertas || [d]);
