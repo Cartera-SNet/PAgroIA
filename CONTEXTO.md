@@ -2,7 +2,7 @@
 
 | | |
 |---|---|
-| **Versión del documento** | **v1.17** |
+| **Versión del documento** | **v1.18** |
 | **Última actualización** | 19 de noviembre de 2026 |
 | **Proyecto** | AgroIA — Diagnóstico de fertilidad del suelo |
 | **Asignatura** | Inteligencia Artificial 26-2 · CUL · Docente: Bryan Josser Fernández Ebrath |
@@ -371,8 +371,8 @@ Cada **60 s** lee los datos **filtrados por variable** y los envía a dispositiv
 
 | Pieza | Versión / estado | Runtime | Dependencias principales |
 |---|---|---|---|
-| Documento | v1.17 | — | — |
-| Frontend | build v1.17 (página 10.9: asistente **Agro** con IA y voz, Historial con fuente de datos, inicio «Saluda a Agro», pantalla **Teclado LCD**, `serve.py` con hilos) | HTML/CSS/JS sin librerías; `serve.py` (Python 3) | `requirements.txt` vacío a propósito |
+| Documento | v1.18 | — | — |
+| Frontend | build v1.18 (página 10.10: asistente **Agro** con IA y voz, Historial con fuente de datos, inicio «Saluda a Agro», pantalla **Teclado LCD**, `serve.py` con hilos) | HTML/CSS/JS sin librerías; `serve.py` (Python 3) | `requirements.txt` vacío a propósito |
 | Backend | código del equipo (`bbf1923`) + 3 archivos (v1.6) | `python:3.12-slim` (Dockerfile) | `fastapi==0.115.12`, `uvicorn==0.34.2`, `starlette==0.46.2`, `SQLAlchemy==2.0.40`, `psycopg2-binary==2.9.12`, `pydantic==2.11.3`, `python-jose==3.5.0`, `python-multipart==0.0.32`, `python-dotenv==1.1.0`, `google-auth==2.59.0`, `httpx==0.28.1`, `requests==2.34.2`, `numpy==2.5.3`, `pillow==12.3.0`, `opencv-python-headless==4.10.0.84`, `reportlab==5.0.1`, `torch==2.14.0`, `torchvision==0.29.0`, `ultralytics==8.4.163`, `ultralytics-platform==0.1.65`, `ultralytics-thop==2.1.6` (70 líneas en total) |
 | Bot de Telegram | v2 (+corrector, LED, TDS, reintentos) | Railpack de Railway (la versión de Python del bot: *por confirmar*) | `python-telegram-bot[webhooks]`, `requests`, `python-dotenv`, `groq` (sin versión fijada) |
 | Puente Sinric | v2 (+`USAR_API=0`) | Railpack 0.43.0, Python 3.13.16 | `requests`, `sinricpro` |
@@ -512,12 +512,18 @@ npm i puppeteer-core @sparticuz/chromium     # navegador sin pantalla para proba
 1. **Sube a la conversación nueva:** este archivo (`AgroIA_CONTEXTO.md`) y, si va a tocar código, los zips que correspondan (`AgroIABackend_completo_sleep.zip`, `AgroIA_frontend_web.zip`, `AgroIA_bot_telegram.zip`, `AGROIA-ASISTENTE_sinric_sin_API.zip`). Las capturas de Railway o ThingSpeak ayudan mucho.
 2. **Pega este prompt:**
 
-> Hola. Continúo el proyecto **AgroIA** (IA 26-2, CUL). Soy Víctor y hablo español de Colombia. Adjunto `AgroIA_CONTEXTO.md` (v1.17): es toda la memoria del proyecto. **Léelo completo antes de responder** y sigue sus **reglas de trabajo (§17)**. Primero resúmeme en 10 líneas dónde estamos y qué es lo más urgente, y espera mi instrucción: **no cambies nada sin mi aprobación**. Cuando entregues archivos, adjúntalos, no incluyas claves y verifica desde el zip final descomprimido. Mantén el documento actualizado (§13).
+> Hola. Continúo el proyecto **AgroIA** (IA 26-2, CUL). Soy Víctor y hablo español de Colombia. Adjunto `AgroIA_CONTEXTO.md` (v1.18): es toda la memoria del proyecto. **Léelo completo antes de responder** y sigue sus **reglas de trabajo (§17)**. Primero resúmeme en 10 líneas dónde estamos y qué es lo más urgente, y espera mi instrucción: **no cambies nada sin mi aprobación**. Cuando entregues archivos, adjúntalos, no incluyas claves y verifica desde el zip final descomprimido. Mantén el documento actualizado (§13).
 
 3. **Primeras cosas que probablemente pida el usuario:** montar Sinric de nuevo, cambiar claves, subir los zips, ayudar a José con el firmware, aprobar «alertas», proteger la API, preparar la presentación.
 4. **Aviso para el asistente nuevo:** no tiene acceso a la API ni a Railway del usuario; trabaja con lo que el usuario pega o con capturas. Los scripts de prueba anteriores no existen (§16).
 
 ## 20. Registro de cambios (lo más reciente arriba)
+
+### v1.18 — 19 nov 2026 — Menú lateral del celular y la tablet: las opciones no respondían (página 10.10)
+- **Síntoma (Víctor, celular):** al abrir el menú con la hamburguesa, las opciones se veían apagadas y al tocarlas no pasaba nada.
+- **Causa:** en `css/shell.css` el menú (`.sidebar`) tenía `z-index:50` y el velo oscuro (`.overlay`) `z-index:55`; en pantallas de hasta 1100 px el velo quedaba **encima** del menú: lo oscurecía y recibía los toques (que solo cerraban el menú). Defecto anterior al «Teclado LCD».
+- **Arreglo:** una sola propiedad, `z-index:60`, **dentro** de la regla `@media (max-width:1100px)` de `.sidebar`. El escritorio no cambia (sigue `sticky`, `z-index:50`, sin velo).
+- **Probado (navegador sin pantalla, desde el zip final):** reproducido el fallo con el CSS viejo (menú z 50 < velo 55; 7 de 7 opciones tapadas) y arreglado con el nuevo en celular (390 px), tablet (820 px) y el límite (1099 px): el menú queda encima, las 7 opciones reciben el toque, tocar «Teclado LCD» navega y tocar fuera del menú lo cierra; escritorio (1300 px) sin cambios; 25/25. Sin regresión: pantalla Teclado 46/46, Agro 46/46, Historial 41/41, 0 páginas con errores de JavaScript. **No probado:** en el celular real de Víctor (hay que recargar sin caché).
 
 ### v1.17 — 19 nov 2026 — Pantalla «Teclado LCD» en la página (10.9)
 - **Pedido de Víctor (aprobado: «Aprobado teclado en la página»):** tener en la página el teclado del menú LCD de José (tabla: teclas 1–9, 0, A, B) con sus opciones, el LED y una consola; el teclado y el LED **físicos no cambian**.
