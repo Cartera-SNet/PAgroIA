@@ -17,6 +17,13 @@ class Handler(http.server.SimpleHTTPRequestHandler):
         super().end_headers()
 
 
-with socketserver.TCPServer(("0.0.0.0", PORT), Handler) as httpd:
+class Servidor(socketserver.ThreadingTCPServer):
+    """Atiende cada conexión en su propio hilo: una conexión abierta que no envía nada
+    (el navegador las abre por adelantado) ya no bloquea al resto de las peticiones."""
+    daemon_threads = True
+    allow_reuse_address = True
+
+
+with Servidor(("0.0.0.0", PORT), Handler) as httpd:
     print(f"AgroIA Web sirviendo en el puerto {PORT}")
     httpd.serve_forever()
