@@ -131,7 +131,7 @@ async function responderBase(it) {
   const c = tsCfg();
   switch (it.id) {
     case "vacio": return { html: "Escribe tu pregunta o una orden, por ejemplo «¿cuál es la temperatura?» o «enciende el LED».", nota: "" };
-    case "saludo": return { html: "¡Hola! Soy Agro 🌱, el asistente de AgroIA. Puedes preguntarme por la temperatura, la humedad, el TDS, pedir un resumen o <b>encender y apagar el LED</b>.", nota: "" };
+    case "saludo": return { html: "Hola, soy Agro, el asistente de AgroIA. ¿En qué te puedo ayudar?", nota: "Pregúntame por la temperatura, la humedad, el TDS o la fertilidad del suelo, o dime «enciende el LED»." };
     case "gracias": return { html: "¡Con gusto! Si necesitas algo más de tu cultivo, aquí estoy.", nota: "" };
     case "adios": return { html: "¡Hasta luego! 🌱", nota: "" };
     case "ayuda": return { html: "Puedes escribirme con tus palabras (aunque se te pase una letra):<br>" + ["¿Cuál es la temperatura?", "¿Cómo está la humedad del suelo?", "Dame un resumen", "¿Necesito regar?", "Promedio de las últimas 24 horas", "Máximo y mínimo de hoy", "¿Hay alertas?", "Enciende el LED", "Apaga el LED"].map(chip).join(" "), nota: "" };

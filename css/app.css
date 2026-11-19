@@ -365,3 +365,10 @@ select.inp{appearance:none;-webkit-appearance:none;padding-right:34px;background
 .rapido-rango .rr-fuente .inp-peq{height:34px;min-width:150px;font-weight:500}
 .rapido-rango small{order:5;flex:1 1 100%;margin-left:0}
 @media (max-width:640px){.rapido-rango .rr-fuente{margin-left:0;flex:1 1 100%}}
+
+/* Chat con Agro: pantalla de inicio (invita a saludar, no saluda sola) */
+.agro-invita{margin:auto;text-align:center;max-width:380px;padding:24px 12px;display:flex;flex-direction:column;align-items:center;gap:8px;color:#33475a}
+.agro-invita-ico{width:54px;height:54px;border-radius:50%;background:#e6f4ec;color:#15803d;display:flex;align-items:center;justify-content:center}
+.agro-invita-ico svg{width:28px;height:28px}
+.agro-invita h2{margin:6px 0 0;font-size:22px;color:#14532d}
+.agro-invita p{margin:0 0 6px;font-size:14px;line-height:1.45;color:#5b6b62}

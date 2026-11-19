@@ -4,7 +4,6 @@
 montarLayout({ nuevo: true });
 (function () {
   "use strict";
-  const SALUDO = "Hola, soy Agro, el asistente de AgroIA. ¿En qué te puedo ayudar?";
   $("chat-cab").insertAdjacentHTML("afterbegin", ico("i-chat"));
   $("chat-enviar").innerHTML = ico("i-send");
   const mic = $("chat-mic"), vozBtn = $("chat-voz"), estado = $("agro-estado"), campo = $("chat-input");
@@ -25,7 +24,7 @@ montarLayout({ nuevo: true });
 
   const enviar = chatConectar({
     log: $("chat-log"), campo: campo, boton: $("chat-enviar"),
-    alEnviar: function () { AgroVoz.detener(); ponerEstado("Pensando…"); responderConVoz = porVoz; porVoz = false; },
+    alEnviar: function () { quitarInvita(); AgroVoz.detener(); ponerEstado("Pensando…"); responderConVoz = porVoz; porVoz = false; },
     alResponder: function (resp) {
       ponerEstado("");
       if (!responderConVoz) return;                     // lo escribieron: solo texto
@@ -51,7 +50,15 @@ montarLayout({ nuevo: true });
     mic.title = "Tu navegador no permite dictado por voz. Usa Chrome o Edge.";
   }
 
-  chatBurbuja($("chat-log"), "ia", SALUDO + "<br>Puedes escribirme o pulsar el micrófono y hablarme: si me hablas, te respondo con voz.", "");
+  // Pantalla de inicio: NO saluda sola. Invita a saludar; Agro responde "Hola, soy Agro…" cuando le dicen hola (por texto o por voz).
+  const invita = document.createElement("div");
+  invita.className = "agro-invita"; invita.id = "agro-invita";
+  invita.innerHTML = '<span class="agro-invita-ico">' + ico("i-brain") + '</span><h2>Saluda a Agro</h2>' +
+    '<p>Escríbele «hola» o pulsa el micrófono y dile «hola, Agro».</p>' +
+    '<button type="button" class="chip" id="agro-invita-btn">👋 Hola, Agro</button>';
+  $("chat-log").appendChild(invita);
+  function quitarInvita() { const x = $("agro-invita"); if (x) x.remove(); }
+  $("agro-invita-btn").onclick = () => { porVoz = false; campo.value = "Hola Agro"; enviar(); };
   ["¿Cuál es la temperatura actual?", "¿Cómo está la humedad del suelo?", "Estado del cultivo", "¿Necesito regar?", "Enciende el LED", "Apaga el LED"].forEach(t => {
     const b = document.createElement("button"); b.className = "chip"; b.textContent = t;
     b.onclick = () => { porVoz = false; campo.value = t; enviar(); }; $("chips").appendChild(b);
