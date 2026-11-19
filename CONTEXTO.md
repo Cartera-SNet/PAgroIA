@@ -2,7 +2,7 @@
 
 | | |
 |---|---|
-| **Versión del documento** | **v1.24** |
+| **Versión del documento** | **v1.25** |
 | **Última actualización** | 19 de noviembre de 2026 |
 | **Proyecto** | AgroIA — Diagnóstico de fertilidad del suelo |
 | **Asignatura** | Inteligencia Artificial 26-2 · CUL · Docente: Bryan Josser Fernández Ebrath |
@@ -372,8 +372,8 @@ Cada **60 s** lee los datos **filtrados por variable** y los envía a dispositiv
 
 | Pieza | Versión / estado | Runtime | Dependencias principales |
 |---|---|---|---|
-| Documento | v1.24 | — | — |
-| Frontend | build v1.24 (página 10.15, con **Agro flotante** en todas las pantallas (ahora sabe qué pantalla estás viendo), página oculta **comparacion.html**: asistente **Agro** con IA y voz, Historial con fuente de datos, inicio «Saluda a Agro», pantalla **Teclado LCD**, `serve.py` con hilos) | HTML/CSS/JS sin librerías; `serve.py` (Python 3) | `requirements.txt` vacío a propósito |
+| Documento | v1.25 | — | — |
+| Frontend | build v1.25 (página 10.16, con **Agro flotante** en todas las pantallas (ahora sabe qué pantalla estás viendo), página oculta **comparacion.html**: asistente **Agro** con IA y voz, Historial con fuente de datos, inicio «Saluda a Agro», pantalla **Teclado LCD**, `serve.py` con hilos) | HTML/CSS/JS sin librerías; `serve.py` (Python 3) | `requirements.txt` vacío a propósito |
 | Backend | código del equipo (`bbf1923`) + 3 archivos (v1.6) | `python:3.12-slim` (Dockerfile) | `fastapi==0.115.12`, `uvicorn==0.34.2`, `starlette==0.46.2`, `SQLAlchemy==2.0.40`, `psycopg2-binary==2.9.12`, `pydantic==2.11.3`, `python-jose==3.5.0`, `python-multipart==0.0.32`, `python-dotenv==1.1.0`, `google-auth==2.59.0`, `httpx==0.28.1`, `requests==2.34.2`, `numpy==2.5.3`, `pillow==12.3.0`, `opencv-python-headless==4.10.0.84`, `reportlab==5.0.1`, `torch==2.14.0`, `torchvision==0.29.0`, `ultralytics==8.4.163`, `ultralytics-platform==0.1.65`, `ultralytics-thop==2.1.6` (70 líneas en total) |
 | Bot de Telegram | v2 (+corrector, LED, TDS, reintentos) | Railpack de Railway (la versión de Python del bot: *por confirmar*) | `python-telegram-bot[webhooks]`, `requests`, `python-dotenv`, `groq` (sin versión fijada) |
 | Puente Sinric | v2 (+`USAR_API=0`) | Railpack 0.43.0, Python 3.13.16 | `requests`, `sinricpro` |
@@ -513,12 +513,18 @@ npm i puppeteer-core @sparticuz/chromium     # navegador sin pantalla para proba
 1. **Sube a la conversación nueva:** este archivo (`AgroIA_CONTEXTO.md`) y, si va a tocar código, los zips que correspondan (`AgroIABackend_completo_sleep.zip`, `AgroIA_frontend_web.zip`, `AgroIA_bot_telegram.zip`, `AGROIA-ASISTENTE_sinric_sin_API.zip`). Las capturas de Railway o ThingSpeak ayudan mucho.
 2. **Pega este prompt:**
 
-> Hola. Continúo el proyecto **AgroIA** (IA 26-2, CUL). Soy Víctor y hablo español de Colombia. Adjunto `AgroIA_CONTEXTO.md` (v1.24): es toda la memoria del proyecto. **Léelo completo antes de responder** y sigue sus **reglas de trabajo (§17)**. Primero resúmeme en 10 líneas dónde estamos y qué es lo más urgente, y espera mi instrucción: **no cambies nada sin mi aprobación**. Cuando entregues archivos, adjúntalos, no incluyas claves y verifica desde el zip final descomprimido. Mantén el documento actualizado (§13).
+> Hola. Continúo el proyecto **AgroIA** (IA 26-2, CUL). Soy Víctor y hablo español de Colombia. Adjunto `AgroIA_CONTEXTO.md` (v1.25): es toda la memoria del proyecto. **Léelo completo antes de responder** y sigue sus **reglas de trabajo (§17)**. Primero resúmeme en 10 líneas dónde estamos y qué es lo más urgente, y espera mi instrucción: **no cambies nada sin mi aprobación**. Cuando entregues archivos, adjúntalos, no incluyas claves y verifica desde el zip final descomprimido. Mantén el documento actualizado (§13).
 
 3. **Primeras cosas que probablemente pida el usuario:** montar Sinric de nuevo, cambiar claves, subir los zips, ayudar a José con el firmware, aprobar «alertas», proteger la API, preparar la presentación.
 4. **Aviso para el asistente nuevo:** no tiene acceso a la API ni a Railway del usuario; trabaja con lo que el usuario pega o con capturas. Los scripts de prueba anteriores no existen (§16).
 
 ## 20. Registro de cambios (lo más reciente arriba)
+
+### v1.25 — 19 nov 2026 — Predicción: «Analizar» ahora se nota (página 10.16)
+- **Reporte de Víctor (captura de Predicción):** «Le doy Analizar y no hace nada».
+- **Causa:** el botón sí funcionaba (si se cambian los datos, el resultado cambia), pero al abrir la pantalla ya se analiza solo con la última lectura de ThingSpeak; al pulsar de nuevo con los mismos valores salía exactamente el mismo resultado y parecía que no pasaba nada.
+- **Arreglo (solo `js/prediccion.js`):** al pulsar «Analizar» (o «Usar la última lectura» o Enter) el botón dice «Analizando…» unos 0,6 s, el resultado se atenúa y al terminar sale el aviso «Análisis actualizado con los valores de la pantalla.». El análisis automático al abrir la pantalla no muestra aviso. El resultado del modelo no cambia.
+- **Probado (navegador sin pantalla, ThingSpeak simulado, sobre el zip final):** al abrir sin aviso; 200 ms «Analizando…»; a los 900 ms vuelve a «Analizar» con aviso; con humedad del suelo 55 cambia a «Planta saludable»; con un campo vacío avisa «Completa «Humedad del suelo».» sin quedar bloqueado; sin errores JS.
 
 ### v1.24 — 19 nov 2026 — Agro entiende la pantalla + «Comparación de fuentes» pasa a página oculta (página 10.15)
 - **Pedido de Víctor (adjuntó su zip con página 10.13 / doc v1.22 y dijo «omite ese cambio, déjalo como estaba»):** (1) el Agro flotante contestó «No tengo acceso a lo que tienes en pantalla» a «¿qué estoy viendo en este panel?» y **debe entenderlo**; (2) quitar del Historial la **«Comparación de fuentes»** y dejarla **como un dashboard oculto**, como el diagnóstico.

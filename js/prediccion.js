@@ -94,15 +94,20 @@ montarLayout({ nuevo: true, estadoPropio: true });
       '<div class="recom"><h4>Recomendaciones</h4><ul>' + res.rec.map(t => '<li>' + ico("i-check") + '<span>' + esc(t) + '</span></li>').join("") + '</ul></div>' + aviso;
   }
 
-  async function analizar() {
+  async function analizar(avisar) {
     const v = leerForm(); if (!v) return;
     $("analizar").disabled = true;
+    const btn = $("analizar"), txtBtn = btn.textContent, caja = $("resultado");
+    btn.textContent = "Analizando…"; caja.style.opacity = ".35";            // se nota que hizo algo aunque el resultado sea el mismo
+    const espera = new Promise(ok => setTimeout(ok, 600));
     let res;
     if (CLASIFICADOR.url) {
       try { res = await clasificarConModelo(v); }
       catch (e) { console.error(e); avisarToast("No se pudo consultar el modelo; se usa la estimación por reglas."); res = estimarPorReglas(v); }
     } else res = clasificarLocal(v);
-    mostrar(res); $("analizar").disabled = false;
+    await espera;
+    mostrar(res); caja.style.opacity = ""; btn.textContent = txtBtn; btn.disabled = false;
+    if (avisar === true) avisarToast("Análisis actualizado con los valores de la pantalla.");
   }
 
   async function usarUltima(auto) {
@@ -117,9 +122,9 @@ montarLayout({ nuevo: true, estadoPropio: true });
     } catch (e) { console.error(e); $("origen-datos").textContent = "No fue posible leer ThingSpeak."; if (!auto) avisarToast("No fue posible leer ThingSpeak."); return false; }
   }
 
-  $("analizar").onclick = analizar;
-  $("ultima").onclick = async () => { if (await usarUltima(false)) analizar(); };
-  CAMPOS_P.forEach(k => $("p-" + k).addEventListener("keydown", e => { if (e.key === "Enter") analizar(); }));
+  $("analizar").onclick = () => analizar(true);
+  $("ultima").onclick = async () => { if (await usarUltima(false)) analizar(true); };
+  CAMPOS_P.forEach(k => $("p-" + k).addEventListener("keydown", e => { if (e.key === "Enter") analizar(true); }));
   $("resultado").innerHTML = '<h3>Resultado de la IA</h3><div class="res-vacio">' + ico("i-brain") + '<span>Completa los datos y pulsa <b>Analizar</b>.</span></div>';
   usarUltima(true).then(ok => { if (ok) analizar(); });
 })();
