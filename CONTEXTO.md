@@ -2,7 +2,7 @@
 
 | | |
 |---|---|
-| **Versión del documento** | **v1.18** |
+| **Versión del documento** | **v1.20** |
 | **Última actualización** | 19 de noviembre de 2026 |
 | **Proyecto** | AgroIA — Diagnóstico de fertilidad del suelo |
 | **Asignatura** | Inteligencia Artificial 26-2 · CUL · Docente: Bryan Josser Fernández Ebrath |
@@ -371,8 +371,8 @@ Cada **60 s** lee los datos **filtrados por variable** y los envía a dispositiv
 
 | Pieza | Versión / estado | Runtime | Dependencias principales |
 |---|---|---|---|
-| Documento | v1.18 | — | — |
-| Frontend | build v1.18 (página 10.10: asistente **Agro** con IA y voz, Historial con fuente de datos, inicio «Saluda a Agro», pantalla **Teclado LCD**, `serve.py` con hilos) | HTML/CSS/JS sin librerías; `serve.py` (Python 3) | `requirements.txt` vacío a propósito |
+| Documento | v1.20 | — | — |
+| Frontend | build v1.20 (página 10.11, con **Agro flotante** en todas las pantallas: asistente **Agro** con IA y voz, Historial con fuente de datos, inicio «Saluda a Agro», pantalla **Teclado LCD**, `serve.py` con hilos) | HTML/CSS/JS sin librerías; `serve.py` (Python 3) | `requirements.txt` vacío a propósito |
 | Backend | código del equipo (`bbf1923`) + 3 archivos (v1.6) | `python:3.12-slim` (Dockerfile) | `fastapi==0.115.12`, `uvicorn==0.34.2`, `starlette==0.46.2`, `SQLAlchemy==2.0.40`, `psycopg2-binary==2.9.12`, `pydantic==2.11.3`, `python-jose==3.5.0`, `python-multipart==0.0.32`, `python-dotenv==1.1.0`, `google-auth==2.59.0`, `httpx==0.28.1`, `requests==2.34.2`, `numpy==2.5.3`, `pillow==12.3.0`, `opencv-python-headless==4.10.0.84`, `reportlab==5.0.1`, `torch==2.14.0`, `torchvision==0.29.0`, `ultralytics==8.4.163`, `ultralytics-platform==0.1.65`, `ultralytics-thop==2.1.6` (70 líneas en total) |
 | Bot de Telegram | v2 (+corrector, LED, TDS, reintentos) | Railpack de Railway (la versión de Python del bot: *por confirmar*) | `python-telegram-bot[webhooks]`, `requests`, `python-dotenv`, `groq` (sin versión fijada) |
 | Puente Sinric | v2 (+`USAR_API=0`) | Railpack 0.43.0, Python 3.13.16 | `requests`, `sinricpro` |
@@ -512,12 +512,27 @@ npm i puppeteer-core @sparticuz/chromium     # navegador sin pantalla para proba
 1. **Sube a la conversación nueva:** este archivo (`AgroIA_CONTEXTO.md`) y, si va a tocar código, los zips que correspondan (`AgroIABackend_completo_sleep.zip`, `AgroIA_frontend_web.zip`, `AgroIA_bot_telegram.zip`, `AGROIA-ASISTENTE_sinric_sin_API.zip`). Las capturas de Railway o ThingSpeak ayudan mucho.
 2. **Pega este prompt:**
 
-> Hola. Continúo el proyecto **AgroIA** (IA 26-2, CUL). Soy Víctor y hablo español de Colombia. Adjunto `AgroIA_CONTEXTO.md` (v1.18): es toda la memoria del proyecto. **Léelo completo antes de responder** y sigue sus **reglas de trabajo (§17)**. Primero resúmeme en 10 líneas dónde estamos y qué es lo más urgente, y espera mi instrucción: **no cambies nada sin mi aprobación**. Cuando entregues archivos, adjúntalos, no incluyas claves y verifica desde el zip final descomprimido. Mantén el documento actualizado (§13).
+> Hola. Continúo el proyecto **AgroIA** (IA 26-2, CUL). Soy Víctor y hablo español de Colombia. Adjunto `AgroIA_CONTEXTO.md` (v1.20): es toda la memoria del proyecto. **Léelo completo antes de responder** y sigue sus **reglas de trabajo (§17)**. Primero resúmeme en 10 líneas dónde estamos y qué es lo más urgente, y espera mi instrucción: **no cambies nada sin mi aprobación**. Cuando entregues archivos, adjúntalos, no incluyas claves y verifica desde el zip final descomprimido. Mantén el documento actualizado (§13).
 
 3. **Primeras cosas que probablemente pida el usuario:** montar Sinric de nuevo, cambiar claves, subir los zips, ayudar a José con el firmware, aprobar «alertas», proteger la API, preparar la presentación.
 4. **Aviso para el asistente nuevo:** no tiene acceso a la API ni a Railway del usuario; trabaja con lo que el usuario pega o con capturas. Los scripts de prueba anteriores no existen (§16).
 
 ## 20. Registro de cambios (lo más reciente arriba)
+
+### v1.20 — 19 nov 2026 — Agro flotante en todas las pantallas (página 10.11)
+- **Pedido de Víctor (aprobado: «Aprobado», tras la frase sugerida «Aprobado Agro en todas las pantallas»):** que el asistente salga en cualquier pantalla y ayude donde esté el usuario, con el estilo de un asistente flotante (botón redondo abajo a la derecha con burbuja de saludo).
+- **Qué se agregó (solo la página; backend, Worker, firmware, bot y Sinric no cambian):** `js/agro-flotante.js` (nuevo), una línea en `js/layout.js` que lo carga en todas las pantallas **menos «Chat con Agro»** (y el login, que no usa el menú), el modo `?embed=1` en `js/layout.js` y `js/chat.js`, y estilos `.agro-*` y `html.embed` al final de `css/app.css`. `VERSION_PAGINA` = 10.11.
+- **Cómo funciona:** botón redondo con la hoja de AgroIA (no una foto) abajo a la derecha. **Burbuja** «Hola, soy Agro. ¿En qué te ayudo?» una sola vez por sesión del navegador, 1,5 s después de entrar y unos 8 s visible. Al tocar el botón se abre una **ventana de chat** (390×620 en escritorio, **pantalla completa en celular**, botón «pantalla completa», X y Escape para cerrar). La ventana es un **iframe** de `pages/chat.html?embed=1`: es el mismo chat de Agro (IA, voz con micrófono, datos reales, orden del LED) pero aislado de la pantalla; **no se descarga hasta que se abre por primera vez**. En el celular el botón queda encima de la barra inferior y el menú lateral queda por encima del botón.
+- **Límites que conviene saber:** la conversación **no se conserva al cambiar de pantalla** (cada pantalla carga su propio chat); comparte los límites de uso de Agro (15 mensajes/5 min, 200/día) con el chat completo; el micrófono dentro de la ventana necesita Chrome o Edge (el iframe declara `allow="microphone"`).
+- **Probado (navegador sin pantalla, API y ThingSpeak simulados, sobre el zip final descomprimido):** 41/41 (aparece en las 9 pantallas probadas, no en «Chat con Agro» ni en el login; burbuja una sola vez; el iframe no carga hasta abrir; dentro del chat no hay menú, barras ni otro botón; saluda y responde con datos; Escape cierra con el foco dentro o fuera; celular: botón sobre la barra inferior, chat a pantalla completa, caja de escribir visible, menú por encima) y sin regresión (menú del celular 25/25, Teclado 46/46, Agro 46/46, Historial 41/41, 0 páginas con errores de JavaScript). **No probado:** IA y voz reales dentro de la ventana, micrófono real en un celular, ni la página en el celular real de Víctor.
+
+### v1.19 — 19 nov 2026 — Apuntado: mejoras pedidas (SIN construir; faltan las frases de aprobación)
+Víctor pidió **apuntar** estas mejoras. No se ha cambiado código. Se construyen cuando diga «Aprobado …».
+- **Historial (frase sugerida: «Aprobado mejoras del historial»):** (1) mensaje claro si no hay datos en el rango, con botón «probar con la otra fuente»; (2) aviso de carga cuando la API está despertando; (3) paginar la tabla en rangos largos; (4) mostrar cuántos registros trae cada fuente (ThingSpeak y base de datos) para el mismo rango; (5) revisar que el CSV abra bien en Excel en español (tildes, separador). **Pedidos extra de Víctor:** que los datos de la **base de datos y de ThingSpeak coincidan en todo** (mismas unidades, decimales, zona horaria y rangos; y mostrar las diferencias si las hay), que la fuente **predeterminada sea la base de datos**, y que los datos sean **claros** para el usuario.
+- **Advertencias dadas a Víctor:** (a) hoy el ESP32 solo envía a ThingSpeak; la base solo recibe datos cuando el firmware también hace `POST /muestras/create` (pendiente de José), así que con la base como fuente predeterminada el Historial puede salir vacío o viejo hasta entonces; (b) la página puede **mostrar** diferencias y presentar los datos igual, pero que ambas fuentes coincidan en valores y fechas depende de que el ESP32 envíe lo mismo a los dos sitios (opción más grande, no decidida: un proceso del backend que copie ThingSpeak a la base).
+- **Asistente Agro en todas las pantallas (frase sugerida: «Aprobado Agro en todas las pantallas»):** botón flotante que abre el chat de Agro encima de cualquier pantalla (sin tapar la barra inferior del celular), con los mismos datos y límites de uso que el chat actual; ya existe la pantalla «Chat con Agro» y el mini chat del Inicio.
+- **Estado del LED (frase sugerida: «Aprobado estado del LED»):** el ESP32 avisa a la API el estado del LED y la página lo muestra («encendido · confirmado hace 5 s» o «sin confirmar»); requiere unas líneas de firmware de José.
+- **Otras ideas ofrecidas (sin pedir todavía):** alertas automáticas por Telegram, aviso de «sin datos recientes» en el bot y en Agro, proteger rutas de la API, botón «Cómo se usa» por pantalla.
 
 ### v1.18 — 19 nov 2026 — Menú lateral del celular y la tablet: las opciones no respondían (página 10.10)
 - **Síntoma (Víctor, celular):** al abrir el menú con la hamburguesa, las opciones se veían apagadas y al tocarlas no pasaba nada.

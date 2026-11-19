@@ -65,4 +65,6 @@ montarLayout({ nuevo: true });
   });
   campo.focus({ preventScroll: true });
   window.addEventListener("pagehide", () => AgroVoz.detener());
+  // Dentro del chat flotante: Escape le pide a la pantalla que cierre la ventana.
+  if (/[?&]embed=1/.test(location.search)) document.addEventListener("keydown", e => { if (e.key === "Escape") parent.postMessage({ agro: "cerrar" }, location.origin); });
 })();

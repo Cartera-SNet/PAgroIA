@@ -33,6 +33,13 @@ function montarLayout(op) {
   op = op || {};
   requerirSesion();
   inyectarIconos();
+  // Dentro del chat flotante (pages/chat.html?embed=1) solo se muestra el chat: sin menú, barras ni Agro flotante.
+  if (/[?&]embed=1/.test(location.search)) {
+    document.documentElement.classList.add("embed");
+    const side = document.getElementById("sidebar"); if (side) side.remove();
+    const m0 = document.querySelector("main"); if (m0) m0.classList.add("content");
+    return;
+  }
   const actual = location.pathname.split("/").pop() || "index.html";
   const grupo = (NAV.find(n => n.p.includes(actual)) || NAV[0]).k;
   const sesion = !!obtenerToken();
@@ -122,6 +129,9 @@ function montarLayout(op) {
     const hit = ATAJOS.find(([re]) => re.test(q));
     if (hit) location.href = RAIZ + hit[1]; else avisarToast(`Sin resultados para «${inp.value}».`);
   });
+
+  // Agro flotante: botón que abre el chat con Agro encima de cualquier pantalla (el chat completo ya lo es).
+  if (actual !== "chat.html") { const sa = document.createElement("script"); sa.src = RAIZ + "js/agro-flotante.js"; document.body.appendChild(sa); }
 
   // Las páginas con datos de ThingSpeak actualizan el estado ellas mismas; las demás consultan la API.
   if (!op.estadoPropio) verificarApi();

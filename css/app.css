@@ -402,3 +402,52 @@ select.inp{appearance:none;-webkit-appearance:none;padding-right:34px;background
 .tec-hora{opacity:.6}
 .tec-vacio{opacity:.6}
 @media (max-width:900px){.tec-grid{grid-template-columns:1fr}}
+
+/* Agro flotante (botón redondo + ventana de chat en todas las pantallas) */
+.agro-fab{position:fixed;right:22px;bottom:22px;z-index:52;width:60px;height:60px;border-radius:50%;border:3px solid #fff;padding:0;cursor:pointer;color:#fff;background:linear-gradient(145deg,#22c55e,#0d4b35);box-shadow:0 8px 24px rgba(8,58,41,.38);display:flex;align-items:center;justify-content:center;transition:transform .15s}
+.agro-fab:hover{transform:scale(1.06)}
+.agro-fab:focus-visible{outline:3px solid #86efac;outline-offset:2px}
+.agro-fab .ic,.agro-fab svg{width:28px;height:28px}
+.agro-fab-x{display:none}
+.agro-fab.abierto .agro-fab-ico{display:none}
+.agro-fab.abierto .agro-fab-x{display:flex}
+.agro-burbuja{position:fixed;right:22px;bottom:94px;z-index:52;max-width:230px;background:#fff;color:#1e293b;border-radius:14px 14px 4px 14px;padding:11px 12px 11px 14px;font-size:13.5px;line-height:1.35;box-shadow:0 8px 28px rgba(16,40,30,.22);border:1px solid #e3ece6;display:none;align-items:flex-start;gap:8px;cursor:pointer}
+.agro-burbuja.ver{display:flex;animation:agro-sube .25s ease-out}
+.agro-burbuja button{border:0;background:none;color:#64748b;font-size:18px;line-height:1;padding:0 2px;cursor:pointer}
+@keyframes agro-sube{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+.agro-panel{position:fixed;right:22px;bottom:94px;z-index:85;width:390px;height:min(620px,calc(100vh - 120px));background:#fff;border-radius:16px;overflow:hidden;box-shadow:0 18px 50px rgba(8,40,28,.35);border:1px solid #d6e5dc;display:flex;flex-direction:column}
+.agro-panel[hidden]{display:none}
+.agro-panel-cab{display:flex;align-items:center;gap:10px;padding:10px 12px;color:#fff;background:linear-gradient(90deg,#0d4b35,#0b6b47)}
+.agro-av{width:36px;height:36px;border-radius:50%;background:rgba(255,255,255,.16);display:flex;align-items:center;justify-content:center;flex:none}
+.agro-av .ic,.agro-av svg{width:20px;height:20px}
+.agro-panel-tit{flex:1;min-width:0;display:flex;flex-direction:column;line-height:1.2}
+.agro-panel-tit b{font-size:15px}.agro-panel-tit small{font-size:11.5px;opacity:.85}
+.agro-pb{width:34px;height:34px;border-radius:8px;border:0;background:rgba(255,255,255,.14);color:#fff;cursor:pointer;display:flex;align-items:center;justify-content:center;padding:0}
+.agro-pb:hover{background:rgba(255,255,255,.26)}
+.agro-pb .ic,.agro-pb svg{width:18px;height:18px}
+.agro-panel-cuerpo{position:relative;flex:1;min-height:0;background:#fff}
+.agro-panel-cuerpo iframe{position:absolute;inset:0;width:100%;height:100%;border:0;background:#fff}
+.agro-cargando{margin:0;padding:24px;text-align:center;color:#5b6b62;font-size:13px}
+@media (max-width:640px){
+  .agro-fab{right:14px;bottom:calc(74px + env(safe-area-inset-bottom,0px));width:54px;height:54px}
+  .agro-burbuja{right:14px;bottom:calc(138px + env(safe-area-inset-bottom,0px))}
+  .agro-panel{inset:0;width:100%;height:100%;border-radius:0;border:0}
+  .agro-panel-cab{padding-top:calc(10px + env(safe-area-inset-top,0px))}
+  html.agro-abierto,html.agro-abierto body{overflow:hidden}
+}
+@media print{.agro-fab,.agro-burbuja,.agro-panel{display:none!important}}
+@media (prefers-reduced-motion:reduce){.agro-fab,.agro-burbuja.ver{transition:none;animation:none}}
+
+/* Chat de Agro dentro de la ventana flotante (pages/chat.html?embed=1) */
+html.embed,html.embed body{background:#fff;height:100%}
+html.embed .content{padding:0}
+html.embed #chat-cab{display:none}
+html.embed .chat-panel{height:100vh;min-height:0;border:0;border-radius:0;box-shadow:none}
+html.embed .chat-panel .msg-log{padding:14px 12px}
+html.embed .chat-panel .chat-form{padding:10px;gap:6px}
+html.embed .chat-panel .inp{height:42px}
+html.embed .chat-panel .btn-send{height:42px;width:46px}
+html.embed .btn-mic,html.embed .btn-voz{width:40px;height:42px}
+html.embed .chips{flex-wrap:nowrap;overflow-x:auto;padding:0 12px 8px;scrollbar-width:thin}
+html.embed .chips .chip{white-space:nowrap;flex:none}
+html.embed .agro-estado,html.embed .agro-estado.on{padding-left:12px;padding-right:12px}
