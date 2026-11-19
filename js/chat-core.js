@@ -1,12 +1,13 @@
 /* ==========================================================
-   AgroIA - Chat con AgroIA (lo usan el Inicio y la página de Chat)
+   AgroIA - Chat con Agro (lo usan el Inicio y la página de Chat)
 
    Cómo responde, en este orden:
      1) Entiende el mensaje con js/chat-nlu.js (tolera tildes, mayúsculas y faltas de ortografía) y, si es una
         consulta conocida, la contesta aquí mismo con datos REALES del canal de ThingSpeak.
      2) Si es una orden del LED ("enciende el led", "apaga el led"...), la envía al ESP32:
         POST {API}/esp32/comando  { accion: "encender_led" | "apagar_led" }  (el ESP32 la recoge con GET /esp32/comando).
-     3) Si no la entiende y el servidor tiene IA (POST {CHAT_ENDPOINT} { texto } -> { respuesta }), se la pregunta.
+     3) Si no la entiende (o es una pregunta larga) y el servidor tiene la IA activada, se la pregunta a Agro (Claude) por
+        POST {CHAT_ENDPOINT} { mensajes, contexto } -> { ok, respuesta }, enviando las lecturas reales como contexto.
      4) Si nada de lo anterior sirve, responde "¿quisiste decir...?" con sugerencias que se pueden tocar.
    ========================================================== */
 
@@ -130,7 +131,7 @@ async function responderBase(it) {
   const c = tsCfg();
   switch (it.id) {
     case "vacio": return { html: "Escribe tu pregunta o una orden, por ejemplo «¿cuál es la temperatura?» o «enciende el LED».", nota: "" };
-    case "saludo": return { html: "¡Hola! Soy AgroIA 🌱. Puedes preguntarme por la temperatura, la humedad, el TDS, pedir un resumen o <b>encender y apagar el LED</b>.", nota: "" };
+    case "saludo": return { html: "¡Hola! Soy Agro 🌱, el asistente de AgroIA. Puedes preguntarme por la temperatura, la humedad, el TDS, pedir un resumen o <b>encender y apagar el LED</b>.", nota: "" };
     case "gracias": return { html: "¡Con gusto! Si necesitas algo más de tu cultivo, aquí estoy.", nota: "" };
     case "adios": return { html: "¡Hasta luego! 🌱", nota: "" };
     case "ayuda": return { html: "Puedes escribirme con tus palabras (aunque se te pase una letra):<br>" + ["¿Cuál es la temperatura?", "¿Cómo está la humedad del suelo?", "Dame un resumen", "¿Necesito regar?", "Promedio de las últimas 24 horas", "Máximo y mínimo de hoy", "¿Hay alertas?", "Enciende el LED", "Apaga el LED"].map(chip).join(" "), nota: "" };
@@ -216,16 +217,52 @@ async function responderBase(it) {
   return null;
 }
 
-/* ---------- servidor de IA (opcional) y sugerencias ---------- */
+/* ---------- Agro con IA (opcional) y sugerencias ---------- */
+const chatHist = [];                         // memoria de la conversación (solo en esta pestaña): [{ rol: "usuario"|"agro", texto }]
+const CHAT_HIST_MAX = 12, CHAT_HIST_ENVIA = 8;
+
+function htmlATexto(html) {                  // quita etiquetas, botones y notas: sirve para la memoria y para leer en voz alta
+  const d = document.createElement("div");
+  d.innerHTML = String(html || "").replace(/<br\s*\/?>/gi, "\n").replace(/<small[\s\S]*?<\/small>/gi, "").replace(/<button[\s\S]*?<\/button>/gi, "");
+  return (d.textContent || "").replace(/[ \t]+/g, " ").replace(/\n{2,}/g, "\n").trim();
+}
+function chatAnotar(rol, texto) {
+  texto = String(texto || "").trim().slice(0, 1400); if (!texto) return;
+  chatHist.push({ rol: rol, texto: texto });
+  while (chatHist.length > CHAT_HIST_MAX) chatHist.shift();
+}
+
+/* Lecturas reales + rangos, en texto, para que la IA responda con datos del cultivo y no invente */
+async function chatContexto() {
+  let t = "Fecha y hora actual en Colombia: " + new Date().toLocaleString("es-CO", { timeZone: TZ_CO }) + ".\n";
+  let D; try { D = await chatDatos(); } catch (e) { D = { error: "x" }; }
+  if (!D || D.error) return t + "No hay lecturas de los sensores disponibles ahora (ThingSpeak no respondió o el canal no tiene datos).";
+  t += "Última lectura hace " + haceTxt(D.hace) + " (" + fmtFechaHora(D.ult) + ").\n";
+  TS_MEDIDAS.forEach(m => {
+    const v = D.R[m.clave].ult;
+    if (v === null) { t += m.nombre + ": sin dato.\n"; return; }
+    const e = chatEstado(m.clave, v);
+    t += m.nombre + ": " + fmtVal(m, v) + " (" + CHAT_TXT_ESTADO[e] + "; rango normal " + chatRango(m.clave) + ").\n";
+  });
+  const f = chatFertilidad(D); if (f.nivel) t += "Fertilidad estimada por reglas: " + f.nivel + ".\n";
+  t += "El pH ya no se mide (el cuarto sensor es el TDS).";
+  return t.slice(0, 3900);
+}
+
 async function chatServidor(texto) {
+  if (!(await AgroVoz.servidorConIA())) return null;          // la IA no está activada en el servidor: se usan las respuestas locales
+  const mensajes = chatHist.slice(-CHAT_HIST_ENVIA).map(m => ({ rol: m.rol, texto: m.texto }));
+  mensajes.push({ rol: "usuario", texto: String(texto).slice(0, 1400) });
   try {
+    const contexto = await chatContexto();
     const h = { "Content-Type": "application/json" }, tk = obtenerToken();
     if (tk) h["Authorization"] = "Bearer " + tk;
-    const ctl = new AbortController(), to = setTimeout(() => ctl.abort(), 8000);
-    const r = await fetch(CHAT_ENDPOINT, { method: "POST", headers: h, body: JSON.stringify({ texto: texto }), signal: ctl.signal });
+    const ctl = new AbortController(), to = setTimeout(() => ctl.abort(), 40000);
+    const r = await fetch(CHAT_ENDPOINT, { method: "POST", headers: h, body: JSON.stringify({ mensajes: mensajes, contexto: contexto }), signal: ctl.signal });
     clearTimeout(to);
-    if (r.ok) { const d = await r.json(); if (d && d.respuesta) return { html: soloTexto(d.respuesta), nota: "" }; }
-  } catch (e) { /* el servidor aún no tiene /chat o no responde */ }
+    if (r.status === 429) return { html: "Hiciste muchas preguntas seguidas a la IA. Espera unos minutos; mientras tanto puedo responder datos de los sensores.", nota: "" };
+    if (r.ok) { const d = await r.json(); if (d && d.ok && d.respuesta) return { html: soloTexto(d.respuesta), nota: "Respuesta generada con IA (Claude).", ia: true }; }
+  } catch (e) { /* sin respuesta: se usan las respuestas locales */ }
   return null;
 }
 function chatSugerencias(texto) {
@@ -234,10 +271,27 @@ function chatSugerencias(texto) {
     "<br><small>Escribe «ayuda» para ver todo lo que puedo hacer.</small>", nota: "" };
 }
 
+/* Lo que siempre se contesta aquí mismo (órdenes del ESP32 y conversación básica): no se manda a la IA */
+const CHAT_LOCAL_SIEMPRE = ["vacio", "saludo", "gracias", "adios", "ayuda", "enlaces", "led", "led_ayuda", "led_estado", "led_sin_objeto", "otro_aparato"];
+
+/* Consejos y conocimiento: con pocas palabras ("¿Necesito regar?") se contestan aquí; con más palabras ("Qué abono me recomiendas
+   para sembrar tomate") la IA responde mejor, porque la palabra clave sola puede ser engañosa. */
+const CHAT_ASESORIA = ["recomendacion", "riego", "fertilidad", "definicion", "rango", "proyecto", "yolo", "alertas"];
+
 async function chatPreguntar(texto) {
   const it = ChatNLU.interpretar(texto);
-  if (it.id !== "desconocido") { try { const r = await responderIntencion(it); if (r) return r; } catch (e) { console.error(e); return { html: "No pude procesar el mensaje. Intenta de nuevo.", nota: "" }; } }
+  const conocida = it.id !== "desconocido";
+  const palabras = String(texto).trim().split(/\s+/).length;
+  // Una consulta de datos CORTA se responde aquí (rápido, exacto y sin costo). Una pregunta larga o de consejo va primero a la IA
+  // (con las lecturas reales como contexto); si la IA no está activada o falla, se contesta con lo local.
+  const preferirIA = conocida && !CHAT_LOCAL_SIEMPRE.includes(it.id) && palabras > (CHAT_ASESORIA.includes(it.id) ? 4 : 9);
+  const local = async () => {
+    try { const r = await responderIntencion(it); return r || null; }
+    catch (e) { console.error(e); return { html: "No pude procesar el mensaje. Intenta de nuevo.", nota: "" }; }
+  };
+  if (conocida && !preferirIA) { const r = await local(); if (r) return r; }
   const s = await chatServidor(texto); if (s) return s;
+  if (conocida && preferirIA) { const r = await local(); if (r) return r; }
   return chatSugerencias(texto);
 }
 
@@ -250,19 +304,29 @@ function chatBurbuja(log, tipo, html, nota) {
   return b;
 }
 
-/* Conecta un formulario de chat (campo + botón + registro) */
+/* Conecta un formulario de chat (campo + botón + registro).
+   Ganchos opcionales de o: alEnviar(texto) antes de contestar, alResponder(respuesta, texto) cuando ya se mostró la respuesta. */
 function chatConectar(o) {
   const log = o.log, campo = o.campo, boton = o.boton;
+  let ocupado = false;
   async function enviar() {
-    const t = campo.value.trim(); if (!t) return;
+    const t = campo.value.trim(); if (!t || ocupado) return;
+    ocupado = true;
     campo.value = ""; log.classList.add("activo");
+    if (o.alEnviar) { try { o.alEnviar(t); } catch (e) { console.error(e); } }
     chatBurbuja(log, "yo", soloTexto(t));
     boton.disabled = true;
     const pensando = chatBurbuja(log, "ia", "Pensando...");
     chatProgreso = txt => { const x = pensando.querySelector(".msg-txt"); if (x) x.textContent = txt; };
-    try { const r = await chatPreguntar(t); pensando.remove(); chatBurbuja(log, "ia", r.html, r.nota); }
+    let resp = null;
+    try { resp = await chatPreguntar(t); pensando.remove(); chatBurbuja(log, "ia", resp.html, resp.nota); }
     catch (e) { pensando.remove(); chatBurbuja(log, "ia", "No pude procesar el mensaje. Intenta de nuevo."); }
     chatProgreso = null;
+    if (resp) {
+      chatAnotar("usuario", t); chatAnotar("agro", htmlATexto(resp.html));
+      if (o.alResponder) { try { o.alResponder(resp, t); } catch (e) { console.error(e); } }
+    }
+    ocupado = false;
     boton.disabled = false; campo.focus({ preventScroll: true });
   }
   boton.addEventListener("click", enviar);

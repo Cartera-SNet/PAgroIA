@@ -46,6 +46,9 @@ const SPRITE = `<svg width="0" height="0" style="position:absolute" aria-hidden=
     <path d="M7 41c7-13 15-22 29-29" fill="none" stroke="#0b3d2a" stroke-width="2" stroke-linecap="round"/>
     <path d="M20 41c0-10 6-17 17-18 0 11-6 18-17 18z" fill="#1c8f46" opacity=".9"/>
   </symbol>
+  <symbol id="i-mic" viewBox="0 0 24 24"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5.5 11.5a6.5 6.5 0 0 0 13 0"/><path d="M12 18v3M9 21h6"/></symbol>
+  <symbol id="i-volume" viewBox="0 0 24 24"><path d="M4 9.5h3.5L12 6v12l-4.5-3.5H4z"/><path d="M15.5 9a4 4 0 0 1 0 6"/><path d="M18 6.5a7.5 7.5 0 0 1 0 11"/></symbol>
+  <symbol id="i-volume-off" viewBox="0 0 24 24"><path d="M4 9.5h3.5L12 6v12l-4.5-3.5H4z"/><path d="m16 9.5 5 5M21 9.5l-5 5"/></symbol>
 </svg>`;
 
 const ico = (id, cls) => `<svg class="ic ${cls || ""}"><use href="#${id}"/></svg>`;

@@ -17,7 +17,7 @@
       <h1>Historial de datos</h1>
       <p>Consulta y analiza el historial de mediciones de los sensores del suelo y del ambiente. Filtra por fecha, parámetro y visualiza la información en gráficos y tablas.</p>
     </div>
-    <div class="banner-badge"><span class="bb-ico" id="h-bb"></span><div><b>AgroIA</b><small>Datos reales desde ThingSpeak <i class="punto gris" id="h-punto"></i></small></div></div>
+    <div class="banner-badge"><span class="bb-ico" id="h-bb"></span><div><b>AgroIA</b><small>Datos reales desde <span id="h-fuente-txt">ThingSpeak</span> <i class="punto gris" id="h-punto"></i></small></div></div>
   </section>
 
   <section class="filtros">
@@ -35,6 +35,16 @@
       </select></div>
     <div class="filtros-acc"><button class="btn-p" id="aplicar"></button><button class="btn-s" id="csv"></button></div>
   </section>
+  <div class="rapido-rango" id="rapido-rango" role="group" aria-label="Rangos rápidos">
+    <span>Rango rápido:</span>
+    <button type="button" data-dias="0">Hoy</button><button type="button" data-dias="1">Últimas 24 h</button>
+    <button type="button" data-dias="6">7 días</button><button type="button" data-dias="29">30 días</button>
+    <label class="rr-fuente" for="f-fuente">Fuente de datos
+      <select class="inp inp-peq" id="f-fuente" title="De dónde se leen los datos del historial">
+        <option value="ts" selected>ThingSpeak</option><option value="bd">Base de datos</option>
+      </select></label>
+    <small id="h-fuente-nota"></small>
+  </div>
 
   <div class="hist-grid">
     <div class="apilado">
@@ -47,10 +57,11 @@
         <div class="tabla-scroll"><table class="tabla-reg">
           <thead><tr><th id="th-fecha">Fecha y hora</th><th id="th-temp"></th><th id="th-humAire"></th><th id="th-humSuelo"></th><th id="th-tds"></th><th></th></tr></thead>
           <tbody id="cuerpo"></tbody></table></div>
+        <p class="tabla-leyenda"><span class="ley-fuera"></span> Los valores en naranja están fuera del rango normal del cultivo. Un guion (—) significa que no hubo lectura.</p>
         <div class="tabla-pie"><div class="pag" id="pag"></div><span class="pag-info" id="pag-info"></span></div>
       </section>
       <section class="panel">
-        <div class="panel-cab"><h3>Evolución de variables</h3><span class="sub" id="evo-sub">Gráficos oficiales de ThingSpeak para el rango elegido</span></div>
+        <div class="panel-cab"><h3>Evolución de variables</h3><span class="sub" id="evo-sub">Gráficos para el rango elegido</span></div>
         <div class="evo" id="evo"></div>
       </section>
     </div>
@@ -72,6 +83,7 @@
 <script src="../js/auth.js"></script>
 <script src="../js/iconos.js"></script>
 <script src="../js/ts.js"></script>
+<script src="../js/tds-bd.js"></script>
 <script src="../js/charts.js"></script>
 <script src="../js/ui.js"></script>
 <script src="../js/layout.js"></script>

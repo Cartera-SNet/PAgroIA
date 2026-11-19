@@ -2,8 +2,8 @@
 
 | | |
 |---|---|
-| **Versión del documento** | **v1.12** |
-| **Última actualización** | 17 de noviembre de 2026 |
+| **Versión del documento** | **v1.14** |
+| **Última actualización** | 19 de noviembre de 2026 |
 | **Proyecto** | AgroIA — Diagnóstico de fertilidad del suelo |
 | **Asignatura** | Inteligencia Artificial 26-2 · CUL · Docente: Bryan Josser Fernández Ebrath |
 
@@ -21,6 +21,7 @@
 - **Dónde estamos (28 oct 2026):** el software (web, bot, Sinric, backend) está terminado y probado **con datos simulados**. Lo que impide verlo funcionar de punta a punta es el **hardware/firmware**: el ESP32 **no envía datos desde ~21 oct** y el **TDS (campo 4) nunca ha llegado**.
 - **Logros recientes:** el cuarto sensor pasó de pH a **TDS** en todo el proyecto; el chat web y el bot entienden **faltas de ortografía** y mandan órdenes del **LED**; la página indica **cuánto hace** del último dato; hay una **página de diagnóstico** (`diagnostico.html`); y el **backend ya duerme** (Serverless) en Railway: se confirmó «Sleeping» el 28 oct.
 - **Lo más urgente:** (1) que José arregle el envío del ESP32 (ThingSpeak `field4` y `POST /muestras/create`); (2) **volver a montar AGROIA-ASISTENTE** en Railway (se borró a propósito para una prueba; §14.3); (3) **cambiar las claves** por el incidente de seguridad de Railway (§14.4); (4) la **seguridad de la API** (§12); (5) probar todo **1–2 días antes** de presentar (§14.5).
+- **Actualización 18 nov 2026 (v1.13):** el chat web es ahora **Agro**, un asistente con **IA de Anthropic (Claude)** y **voz** (§20, v1.13). Necesita un Worker nuevo de Cloudflare (`agro-proxy`, carpeta/zip aparte, con su `LEEME.md`) y dos variables en el backend de Railway. **Sin esas variables todo sigue funcionando como antes** (respuestas locales). El Historial puede leer de ThingSpeak o de la base de datos.
 - **Dónde está cada cosa de este documento:** arquitectura §1–§3 · backend §4 · web §5 · bot §6 · Sinric §7 · equipo y pendientes §8 · Git §9 · Railway §10 y §14 · verificación §11 · seguridad §12 · **instalación y versiones §15** · pruebas §16 · **reglas de trabajo §17** · futuro §18 · **prompt para el chat nuevo §19** · historial §20.
 
 ---
@@ -98,7 +99,7 @@ Los nombres antiguos («Temperatura», «Humedad ambiental», «TDS del suelo»,
 
 - **Tecnología:** FastAPI + SQLAlchemy + Neon. **Despliegue:** `Dockerfile` (`python:3.12-slim` + `libxcb1`, `libgl1`, `libglib2.0-0`, OpenCV headless). `railway.toml` con `builder = "DOCKERFILE"`, arranque `uvicorn main:app --host 0.0.0.0 --port $PORT`, healthcheck `/docs`. Hay `.dockerignore`; `imagenes/` y `uploads/` no van al despliegue; `models/best.pt` sí.
 - **Variables de entorno en Railway** (solo nombres): `DATABASE_URL` (crítica), `BACKUP_CLAVE` (clave maestra de administración; **solo en Railway**), `SECRET_KEY`, `ALGORITHM` (HS256), `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `GOOGLE_REDIRECT_URI` (opcionales), `INFLUXDB_URL` / `INFLUXDB_DATABASE` / `INFLUXDB_TOKEN` (**no se usan en la nube**).
-- **Rutas principales:** `/auth`, `/users`, `/zonas_geograficas`, `/tipos_suelo`, `/lotes`, `/tipos_sensor`, `/sensores`, `/parametros`, `/muestras`, `/alertas`, `/consultas-llm`, `/iot`, `/vision` (`/analizar`, `/camara`, stream), `/menu`, `/esp32`, `/admin`.
+- **Rutas principales:** `/auth`, `/users`, `/zonas_geograficas`, `/tipos_suelo`, `/lotes`, `/tipos_sensor`, `/sensores`, `/parametros`, `/muestras`, `/alertas`, `/consultas-llm`, `/iot`, `/vision` (`/analizar`, `/camara`, stream), `/menu`, `/esp32`, `/admin`. **Desde v1.13:** `/agro` (`/estado`, `/chat`, `/voz`; variables `AGRO_PROXY_URL`, `AGRO_PROXY_TOKEN`; ver §20) y `/muestras/list` con filtros opcionales.
 - **Administración (v1.9) — respaldo y pausa de recepción** (`app/routes/admin_routes.py`, `app/core/admin_clave.py`, `app/services/respaldo_service.py`, `app/crud/ajuste_sistema_crud.py`, `app/models/ajuste_sistema_model.py`):
   - **Clave maestra:** la lee de la variable de entorno **`BACKUP_CLAVE`** (Railway). **Nunca está en el código ni en la página.** Si la variable no existe, estas rutas responden 503 (cerradas). La clave viaja en la cabecera `X-Admin-Clave`. Protección: 5 intentos fallidos por origen → bloqueo de 15 min; tope global de 30 fallos / 15 min (429).
   - `GET /admin/estado` (público): `{recepcion: "activada" | "pausada", clave_configurada}`.
@@ -133,7 +134,7 @@ Los nombres antiguos («Temperatura», «Humedad ambiental», «TDS del suelo»,
 **Problemas conocidos del backend**
 1. **«Hoy» en UTC** en las teclas 4–7 de `/menu`: **corregido en `AgroIA_backend_api.zip` (v1.3)** — `menu_routes.py` usa la hora de Colombia (probado contra PostgreSQL real, 4 horas simuladas, con TDS). *Falta subirlo al repositorio.*
 2. **`/menu/ultimo-registro`** devolvía solo la variable que llegó última (filtraba por la fecha exacta de la última muestra, y como cada variable llega en una petición distinta, salía una sola; con «TDS del suelo» además salía con la letra «S»). **Corregido en el mismo archivo:** devuelve el último valor de **cada** variable.
-3. **`/chat` no existe.** Ya no bloquea el chat web (responde con su motor local), pero sigue siendo la vía para un chat con IA (Groq) en la página.
+3. **`/chat` no existe**, pero desde la v1.13 el chat con IA usa `/agro/chat` (proxy de Cloudflare + Claude); sin configurar, la página responde con su motor local.
 4. **Seguridad (verificado con una prueba real el 28 oct):** sin token se puede **crear usuarios** (`POST /users/create`; el usuario creado puede iniciar sesión), **listar usuarios con su contraseña en texto plano** (`/users/list`, `/users/userId/{id}`) y **encender/apagar el LED** (`POST /esp32/comando`). Las contraseñas se guardan y comparan en texto plano. Pendiente de decidir con Thair (ver §12 y §18).
 5. El modelo `historial_consultas_llm` apunta a una tabla `"user"` que no existe (debería ser `usuarios`).
 6. Cada petición a `/muestras/list` devuelve **todas** las filas (crece sin parar): por eso el bot y el puente leen solo las primeras.
@@ -369,8 +370,8 @@ Cada **60 s** lee los datos **filtrados por variable** y los envía a dispositiv
 
 | Pieza | Versión / estado | Runtime | Dependencias principales |
 |---|---|---|---|
-| Documento | v1.12 | — | — |
-| Frontend | build v1.12 (página 10.6: canal nuevo 3586784 y nuevo orden de campos) | HTML/CSS/JS sin librerías; `serve.py` (Python 3) | `requirements.txt` vacío a propósito |
+| Documento | v1.14 | — | — |
+| Frontend | build v1.13 (página 10.7: asistente **Agro** con IA y voz, Historial con fuente de datos) | HTML/CSS/JS sin librerías; `serve.py` (Python 3) | `requirements.txt` vacío a propósito |
 | Backend | código del equipo (`bbf1923`) + 3 archivos (v1.6) | `python:3.12-slim` (Dockerfile) | `fastapi==0.115.12`, `uvicorn==0.34.2`, `starlette==0.46.2`, `SQLAlchemy==2.0.40`, `psycopg2-binary==2.9.12`, `pydantic==2.11.3`, `python-jose==3.5.0`, `python-multipart==0.0.32`, `python-dotenv==1.1.0`, `google-auth==2.59.0`, `httpx==0.28.1`, `requests==2.34.2`, `numpy==2.5.3`, `pillow==12.3.0`, `opencv-python-headless==4.10.0.84`, `reportlab==5.0.1`, `torch==2.14.0`, `torchvision==0.29.0`, `ultralytics==8.4.163`, `ultralytics-platform==0.1.65`, `ultralytics-thop==2.1.6` (70 líneas en total) |
 | Bot de Telegram | v2 (+corrector, LED, TDS, reintentos) | Railpack de Railway (la versión de Python del bot: *por confirmar*) | `python-telegram-bot[webhooks]`, `requests`, `python-dotenv`, `groq` (sin versión fijada) |
 | Puente Sinric | v2 (+`USAR_API=0`) | Railpack 0.43.0, Python 3.13.16 | `requests`, `sinricpro` |
@@ -510,12 +511,39 @@ npm i puppeteer-core @sparticuz/chromium     # navegador sin pantalla para proba
 1. **Sube a la conversación nueva:** este archivo (`AgroIA_CONTEXTO.md`) y, si va a tocar código, los zips que correspondan (`AgroIABackend_completo_sleep.zip`, `AgroIA_frontend_web.zip`, `AgroIA_bot_telegram.zip`, `AGROIA-ASISTENTE_sinric_sin_API.zip`). Las capturas de Railway o ThingSpeak ayudan mucho.
 2. **Pega este prompt:**
 
-> Hola. Continúo el proyecto **AgroIA** (IA 26-2, CUL). Soy Víctor y hablo español de Colombia. Adjunto `AgroIA_CONTEXTO.md` (v1.12): es toda la memoria del proyecto. **Léelo completo antes de responder** y sigue sus **reglas de trabajo (§17)**. Primero resúmeme en 10 líneas dónde estamos y qué es lo más urgente, y espera mi instrucción: **no cambies nada sin mi aprobación**. Cuando entregues archivos, adjúntalos, no incluyas claves y verifica desde el zip final descomprimido. Mantén el documento actualizado (§13).
+> Hola. Continúo el proyecto **AgroIA** (IA 26-2, CUL). Soy Víctor y hablo español de Colombia. Adjunto `AgroIA_CONTEXTO.md` (v1.14): es toda la memoria del proyecto. **Léelo completo antes de responder** y sigue sus **reglas de trabajo (§17)**. Primero resúmeme en 10 líneas dónde estamos y qué es lo más urgente, y espera mi instrucción: **no cambies nada sin mi aprobación**. Cuando entregues archivos, adjúntalos, no incluyas claves y verifica desde el zip final descomprimido. Mantén el documento actualizado (§13).
 
 3. **Primeras cosas que probablemente pida el usuario:** montar Sinric de nuevo, cambiar claves, subir los zips, ayudar a José con el firmware, aprobar «alertas», proteger la API, preparar la presentación.
 4. **Aviso para el asistente nuevo:** no tiene acceso a la API ni a Railway del usuario; trabaja con lo que el usuario pega o con capturas. Los scripts de prueba anteriores no existen (§16).
 
 ## 20. Registro de cambios (lo más reciente arriba)
+
+### v1.14 — 19 nov 2026 — Agro enfocado en la fertilidad y con conocimiento del proyecto
+- **Pedido de Víctor:** que el asistente se base en la **fertilidad del suelo** y «lea todo el programa» (frontend, backend, todo), muy bien entrenado.
+- **Cómo se hizo (solo `agro-proxy/worker.js`; web y backend no cambian):** (1) instrucciones nuevas: especialidad = fertilidad del suelo; preguntas ajenas se contestan en 1–2 frases y se vuelve al tema; honestidad sobre límites (**no se mide N-P-K ni pH**; la fertilidad es una estimación); (2) nueva constante `CONOCIMIENTO_AGROIA`: resumen del proyecto (arquitectura, canal y campos, pantallas, rangos exactos de `config.js`, cómo se estima la fertilidad, el modelo de ML con sus límites, interpretación de cada sensor, qué hacer si algo falla, lo que Agro no puede hacer); (3) el bloque fijo se manda con **caché de Anthropic** y las lecturas reales en un bloque aparte; `MAX_TOKENS` por defecto 600.
+- **Límite real:** Agro **no lee el código en vivo** ni la base de datos; conoce este resumen. Si cambian rangos, canal, campos o pantallas, hay que actualizar `CONOCIMIENTO_AGROIA` y volver a pegar el Worker en Cloudflare. No se incluyeron claves, contraseñas, rutas de administración ni fallas de seguridad en ese texto.
+- **Clave de Anthropic enviada como `Authorization: Bearer`** (forma documentada hoy; `x-api-key` es la antigua) para que sirva también con claves de formato nuevo `sk-ant-usr-…`. El Worker limpia espacios sobrantes de las claves.
+- **Probado:** Worker 36/36 (incluye que los rangos y el canal enseñados sean idénticos a los de `config.js` y que el texto no nombre claves). **No probado:** la calidad de las respuestas con Claude real.
+- **Costos (para Víctor):** el zip del proxy no cuesta; Cloudflare Workers gratis alcanza; Anthropic se paga por uso (límite mensual recomendado); Google según su cuota.
+
+### v1.13 — 18 nov 2026 — Asistente «Agro» (IA + voz) e Historial más claro
+- **Qué pidió Víctor:** que el chat se llame **Agro**; que salude «Hola, soy Agro, el asistente de AgroIA. ¿En qué te puedo ayudar?»; que **conteste por voz si le hablan (micrófono) y por texto si le escriben**; que la IA de Anthropic le dé más conocimiento; un proxy **nuevo y propio** (no el de JARVIS); y un Historial de datos más claro y con datos reales.
+- **Decisión de seguridad:** las claves **NO van incrustadas** en ningún archivo (lo pidió así, pero se explicó que cualquiera podría robarlas de la página y gastar su saldo). Viven solo como **secretos de Cloudflare** y como **variables de Railway**. Esta decisión no se cambia.
+- **Cómo funciona:** Página → backend (`/agro/chat`, `/agro/voz`, exigen sesión iniciada) → **Worker `agro-proxy`** (Cloudflare) → Claude (modelo `claude-haiku-5-5`, cambiable con la variable `MODELO`) y voz de Google (Gemini TTS, respaldo Chirp 3 HD).
+- **Variables nuevas (solo nombres):**
+  - *Backend en Railway:* `AGRO_PROXY_URL` (debe empezar por `https://`) y `AGRO_PROXY_TOKEN` (igual a `AGRO_TOKEN` del Worker). Si faltan, `/agro/chat` y `/agro/voz` responden 503 `ia_no_configurada`, `/agro/estado` dice `{"ia":false}` y la página usa sus respuestas locales y la voz del navegador.
+  - *Worker en Cloudflare (secretos):* `AGRO_TOKEN`, `ANTHROPIC_API_KEY`, `GEMINI_API_KEY`, `GOOGLE_TTS_API_KEY`. Opcionales: `MODELO`, `MAX_TOKENS`, `VOZ_NOMBRE` (Umbriel), `VOZ_MODELO`, `VOZ_ESTILO`, `VOZ_IDIOMA`.
+- **Backend (archivos):** nuevo `app/routes/agro_routes.py` (`GET /agro/estado` público; `POST /agro/chat` y `POST /agro/voz` con login); `main.py` lo registra con prefijo `/agro`; `.env.example` con las 2 variables vacías. Límites por usuario (en memoria): chat 15 cada 5 min y 200 al día; voz 20 cada 5 min y 150 al día (429). Los errores del proxy se devuelven genéricos (502/503/504) sin detalles.
+- **`GET /muestras/list` ahora acepta filtros opcionales** `sensor_id`, `desde`, `hasta`, `limite` (1–100000). Sin parámetros devuelve todo, como antes (nada se rompe). Las fechas de la base están en UTC; Colombia es UTC-5.
+- **Worker (`agro-proxy/worker.js`, `LEEME.md`):** rutas `GET /health`, `POST /chat`, `POST /voz`; token con comparación segura; la personalidad de Agro (español de Colombia, frases cortas para voz, no inventa lecturas, no controla el LED por sí mismo); recorta mensajes (12 máx., 1500 caracteres c/u) y limpia emojis/etiquetas antes de la voz; voz máx. 1000 caracteres. Se entrega aparte (`AgroIA_agro_proxy.zip`) porque se pega en Cloudflare, no en Railway.
+- **Frontend (página 10.7):** `js/agro-voz.js` (nuevo: micrófono con Web Speech es-CO, voz en la nube con respaldo del navegador, botón silenciar guardado en `agroia_voz_silencio`); `js/chat-core.js` (contexto real al IA: lecturas, rangos, fertilidad estimada, hora de Colombia; últimos 8 turnos; los comandos del LED, saludos, enlaces y ayuda **siempre** se resuelven en local; las preguntas de consejo o largas van primero a la IA; si la IA falla se usa la respuesta local); `js/chat.js`, `pages/chat.html`, `dashboard.html` (mini-chat «Chat con Agro»), `js/layout.js` (menú), `js/iconos.js` (3 iconos), `js/config.js` (`CHAT_ENDPOINT`, `AGRO_VOZ_ENDPOINT`, `AGRO_ESTADO_ENDPOINT`), `css/app.css`.
+  - La respuesta con IA lleva la nota «Respuesta generada con IA (Claude).». El saludo inicial es **texto** (los navegadores bloquean el audio automático); la voz solo suena cuando el usuario habló con el micrófono. El micrófono funciona mejor en Chrome/Edge y pide permiso.
+- **Historial de datos (más claro):** selector **«Fuente de datos»** — *ThingSpeak* (por defecto; gráficas oficiales) o *Base de datos* (consulta `/muestras/list` por sensor: 1 humedad suelo, 2 temperatura, 3 humedad aire, 5 TDS; promedios por intervalo, tabla «datos originales» agrupada por minuto, gráficas propias, tope de 20000 filas por sensor con aviso). Banner que dice de dónde vienen los datos, filtros rápidos (Hoy, Últimas 24 h, 7 días, 30 días), tarjetas con promedio y **Mín · Máx**, leyenda de la tabla (naranja = fuera de rango; «—» = sin lectura), CSV con el nombre de la fuente. **No se implementó** excluir valores inválidos (p. ej. TDS 0 de pruebas) de los promedios.
+- **Cambios visuales (por si Víctor quiere deshacer alguno):** título y menú «Chat con Agro»; botones de micrófono y voz en el chat; línea de estado de Agro; tabla del historial con menos relleno y sin barra horizontal; filtros rápidos; leyenda; tarjetas Mín/Máx; selector de fuente junto a los filtros rápidos; placeholder del chat «Escribe o habla con Agro…».
+- **Probado (con simulaciones):** Worker 28/28; backend 32/32 (TestClient) y `main.py` importa con todos los routers; página en Chrome sin interfaz: chat/voz 42/42, historial 41/41, dashboard y orden de campos sin errores, 15 páginas sin errores de JavaScript.
+- **NO probado:** llamadas reales a Anthropic, a Google (voz), a Cloudflare ni a Railway; micrófono y audio reales en un navegador; el parámetro `thinking` desactivado de Claude (si lo rechaza, el Worker reintenta sin él); el nombre del modelo de voz `gemini-3.1-flash-tts-preview`.
+- **Correcciones a lo dicho antes:** el 8000 de ThingSpeak es el límite **por petición** de `feeds.json`, no «8.000 puntos por canal»; la exclusión de valores inválidos en promedios **no** está hecha.
+- **Pendiente de Víctor:** crear el Worker y los 4 secretos (ver `LEEME.md`); crear las 2 variables en Railway (una a la vez, esperar «Active»); subir los zips; poner límite de gasto mensual en Anthropic; **cambiar las claves que se pegaron en chats** (Anthropic, Google TTS, token del JARVIS, Groq, token de Telegram, `BACKUP_CLAVE`).
 
 ### v1.12 — 18 nov 2026 — Canal de ThingSpeak nuevo (3586784) y nuevo orden de campos
 - **Cambio:** José creó un canal nuevo (**3586784**), con otra Write API Key (la clave del canal anterior, que se había expuesto, ya no sirve para este). Decisión de Víctor: usar **el orden de José**: campo 1 humedad del suelo, 2 temperatura, 3 humedad del aire, 4 TDS.

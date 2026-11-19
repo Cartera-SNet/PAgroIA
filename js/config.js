@@ -1,5 +1,5 @@
 // Configuración central de la página.
-const VERSION_PAGINA = "10.6";
+const VERSION_PAGINA = "10.7";
 // Dirección de la API:
 //  - abriendo la página en este computador (localhost / archivo local) -> backend local
 //  - publicada (Railway u otro hosting) -> API desplegada.
@@ -38,8 +38,14 @@ const THINGSPEAK = {
   minutosEnLinea: 5        // si la última lectura es más vieja, se marca "sin datos recientes"
 };
 
-// Chat con IA (Punto 4): POST { texto } -> { respuesta }. Hasta que el backend lo tenga, avisa que no está disponible.
-const CHAT_ENDPOINT = API_BASE_URL + "/chat";
+// Asistente «Agro» (chat con Claude y voz). Pasa por el backend, que guarda las claves; aquí NO hay ninguna clave.
+//   POST /agro/chat { mensajes:[{rol,texto}], contexto } -> { ok, respuesta }
+//   POST /agro/voz  { texto } -> { ok, audio (base64), formato: "wav"|"mp3" }
+//   GET  /agro/estado -> { ia: true|false }  (si el servidor tiene la IA activada)
+// Si la IA no está activada o falla, el chat sigue respondiendo con sus respuestas locales (datos reales de ThingSpeak).
+const CHAT_ENDPOINT = API_BASE_URL + "/agro/chat";
+const AGRO_VOZ_ENDPOINT = API_BASE_URL + "/agro/voz";
+const AGRO_ESTADO_ENDPOINT = API_BASE_URL + "/agro/estado";
 
 // ============================================================
 // CLASIFICADOR DE FERTILIDAD (Punto 3: Edge Impulse)

@@ -10,7 +10,7 @@ const NAV = [
   { k: "monitoreo",  t: "Monitoreo",                i: "i-chart", h: "pages/monitoreo.html",     p: ["monitoreo.html"] },
   { k: "historial",  t: "Historial de datos",       i: "i-doc",   h: "pages/historial.html",     p: ["historial.html", "alertas.html"] },
   { k: "prediccion", t: "Predicción de fertilidad", i: "i-brain", h: "pages/prediccion.html",    p: ["prediccion.html", "vision.html", "camara.html"] },
-  { k: "chat",       t: "Chat con IA",              i: "i-chat",  h: "pages/chat.html",          p: ["chat.html"] },
+  { k: "chat",       t: "Chat con Agro",            i: "i-chat",  h: "pages/chat.html",          p: ["chat.html"] },
   { k: "config",     t: "Configuración",            i: "i-gear",  h: "pages/configuracion.html", p: ["configuracion.html"] }
 ];
 // Pestañas internas de las opciones que agrupan varias páginas.

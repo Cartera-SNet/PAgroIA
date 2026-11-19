@@ -4,18 +4,19 @@
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🌱</text></svg>">
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Chat con IA · AgroIA</title>
+<title>Chat con Agro · AgroIA</title>
 <link rel="stylesheet" href="../css/shell.css">
 <link rel="stylesheet" href="../css/app.css">
 </head>
 <body>
 <aside id="sidebar"></aside>
 <main>
-  <div class="chat-pag-cab" id="chat-cab"><div><h1>Chat con AgroIA</h1><p>Consulta tus datos, recibe recomendaciones y controla el ESP32.</p></div></div>
+  <div class="chat-pag-cab" id="chat-cab"><div><h1>Chat con Agro</h1><p>Pregúntale por tus datos, pide recomendaciones y controla el ESP32. Escribe o usa el micrófono.</p></div></div>
   <section class="chat-panel">
     <div class="msg-log activo" id="chat-log" aria-live="polite"></div>
     <div class="chips" id="chips"></div>
-    <div class="chat-form"><input class="inp" id="chat-input" placeholder="Escribe un mensaje..." autocomplete="off"><button class="btn-send" id="chat-enviar" aria-label="Enviar"></button></div>
+    <div class="agro-estado" id="agro-estado" role="status" aria-live="polite"></div>
+    <div class="chat-form"><button type="button" class="btn-mic" id="chat-mic" aria-label="Hablar con Agro" title="Hablar con Agro"></button><input class="inp" id="chat-input" placeholder="Escribe o habla con Agro…" autocomplete="off"><button type="button" class="btn-voz" id="chat-voz" aria-label="Activar o silenciar la voz de Agro" title="Voz de Agro"></button><button class="btn-send" id="chat-enviar" aria-label="Enviar"></button></div>
   </section>
 </main>
 <script src="../js/config.js"></script>
@@ -25,6 +26,7 @@
 <script src="../js/ts.js"></script>
 <script src="../js/charts.js"></script>
 <script src="../js/ui.js"></script>
+<script src="../js/agro-voz.js"></script>
 <script src="../js/chat-nlu.js"></script>
 <script src="../js/chat-core.js"></script>
 <script src="../js/layout.js"></script>

@@ -1,6 +1,7 @@
 /* ==========================================================
-   AgroIA - Historial de datos (datos reales de ThingSpeak)
-   Rango de fechas + parámetro + intervalo (promedio), gráfico con doble eje, tabla paginada y CSV.
+   AgroIA - Historial de datos (datos reales)
+   Fuente a elegir: ThingSpeak (la misma del Inicio) o la base de datos (todo lo que el ESP32 envió al servidor).
+   Rango de fechas + parámetro + intervalo (promedio), gráficos, tabla paginada, resumen (promedio, mínimo, máximo) y CSV.
    ========================================================== */
 montarLayout({ nuevo: true, estadoPropio: true, buscador: "Buscar por fecha, parámetro o tipo de dato..." });
 
@@ -8,6 +9,8 @@ montarLayout({ nuevo: true, estadoPropio: true, buscador: "Buscar por fecha, par
   "use strict";
   let PP = 10;                                    // registros por página (se cambia en la tabla)
   let datos = [], param = "todos", pagina = 1, texto = "", cargado = false, rango = null;
+  let fuente = "ts", truncado = false;               // fuente: "ts" = ThingSpeak, "bd" = base de datos
+  const FUENTE_TXT = { ts: "ThingSpeak", bd: "la base de datos" };
 
   // ---- íconos de las piezas estáticas
   $("h-ico").innerHTML = ico("i-cal"); $("h-bb").innerHTML = ico("i-sprout");
@@ -32,7 +35,7 @@ montarLayout({ nuevo: true, estadoPropio: true, buscador: "Buscar por fecha, par
   const TINTE = { temp: "tint-rojo", humAire: "tint-azul", humSuelo: "tint-verde", tds: "tint-morado" };
   $("kpis").innerHTML = TS_MEDIDAS.map(m =>
     '<article class="kpi ' + TINTE[m.clave] + '" id="hk-' + m.clave + '">' + iconoMedida(m) +
-    '<div class="kpi-info"><span class="kpi-lab">' + m.nombre + '</span><b class="kpi-val" data-v>—</b><span class="kpi-sub">Promedio en el período</span></div>' +
+    '<div class="kpi-info"><span class="kpi-lab">' + m.nombre + '</span><b class="kpi-val" data-v>—</b><span class="kpi-sub">Promedio en el período</span><span class="kpi-mm" data-mm>Mín — · Máx —</span></div>' +
     '</article>').join("");
 
   // ---- filtros rápidos
@@ -52,25 +55,74 @@ montarLayout({ nuevo: true, estadoPropio: true, buscador: "Buscar por fecha, par
   $("f-desde").value = fmtISO(hace7); $("f-hasta").value = fmtISO(hoy);
   $("f-desde").max = $("f-hasta").max = fmtISO(hoy);
 
-  // ---- consulta a ThingSpeak
+  // ---- consulta (ThingSpeak o base de datos)
+  const BD_SENSORES = { 1: "humSuelo", 2: "temp", 3: "humAire", 5: "tds" };   // Sensor_Id de la base -> medida de la página
+  const BD_LIMITE = 20000, OFFSET_CO = 5 * 3600000;                           // lecturas máximas por sensor; Colombia = UTC-5 (sin horario de verano)
+  const isoUTC = ms => new Date(ms).toISOString().slice(0, 19);               // "2026-11-18T05:00:00"
+
+  /* Lee la base de datos (GET /muestras/list con filtros) y la deja con el mismo formato que ThingSpeak: [{ t, v:{temp,humAire,humSuelo,tds} }].
+     Los días elegidos son de Colombia. Con intervalo se promedia por cubetas de ese tamaño; con «datos originales» se agrupa por minuto,
+     porque el ESP32 manda cada medida en una petición distinta. */
+  async function bdFeeds(d, h, it) {
+    const ini = Date.UTC(+d.slice(0, 4), +d.slice(5, 7) - 1, +d.slice(8, 10)) + OFFSET_CO;
+    const fin = Date.UTC(+h.slice(0, 4), +h.slice(5, 7) - 1, +h.slice(8, 10)) + OFFSET_CO + 86400000 - 1000;
+    const resp = await Promise.all(Object.keys(BD_SENSORES).map(async id => {
+      const url = API_BASE_URL + "/muestras/list?sensor_id=" + id + "&desde=" + isoUTC(ini) + "&hasta=" + isoUTC(fin) + "&limite=" + BD_LIMITE;
+      const r = await fetch(url, { cache: "no-store" });
+      if (!r.ok) throw new Error("HTTP " + r.status);
+      const filas = await r.json();
+      return { clave: BD_SENSORES[id], filas: Array.isArray(filas) ? filas : [] };
+    }));
+    truncado = resp.some(x => x.filas.length >= BD_LIMITE);
+    const paso = (it > 0 ? it : 1) * 60000, cub = new Map();
+    resp.forEach(x => x.filas.forEach(m => {
+      if (m.Muestra_Valor === null || m.Muestra_Valor === undefined) return;
+      const v = Number(m.Muestra_Valor); if (!isFinite(v)) return;
+      const k = Math.floor((tdsFechaUTC(m.Muestra_FechaHora).getTime() - OFFSET_CO) / paso);
+      let c = cub.get(k); if (!c) { c = { s: {}, n: {} }; cub.set(k, c); }
+      c.s[x.clave] = (c.s[x.clave] || 0) + v; c.n[x.clave] = (c.n[x.clave] || 0) + 1;
+    }));
+    return Array.from(cub.entries()).sort((a, b) => a[0] - b[0]).map(e => {
+      const c = e[1], v = {};
+      TS_MEDIDAS.forEach(m => { v[m.clave] = c.n[m.clave] ? c.s[m.clave] / c.n[m.clave] : null; });
+      return { t: new Date(e[0] * paso + OFFSET_CO), v: v };
+    });
+  }
+
   async function aplicar() {
     const d = $("f-desde").value, h = $("f-hasta").value, it = parseInt($("f-int").value, 10);
     if (!d || !h) return avisarToast("Elige las dos fechas.");
     if (d > h) return avisarToast("La fecha «Desde» no puede ser posterior a «Hasta».");
-    if (!tsCfg().channelId) { vacio("Falta configurar el canal de ThingSpeak (Configuración)."); return; }
+    fuente = $("f-fuente").value; truncado = false; pintarFuente();
+    if (fuente === "ts" && !tsCfg().channelId) { vacio("Falta configurar el canal de ThingSpeak (Configuración)."); return; }
     $("aplicar").disabled = true;
     try {
-      const res = await tsFeeds({ results: 8000, start: d + " 00:00:00", end: h + " 23:59:59", average: it > 0 ? it : 0 });
-      datos = res.feeds; cargado = true; pagina = 1; rango = { d: d, h: h, it: it };
+      if (fuente === "bd") datos = await bdFeeds(d, h, it);
+      else { const res = await tsFeeds({ results: 8000, start: d + " 00:00:00", end: h + " 23:59:59", average: it > 0 ? it : 0 }); datos = res.feeds; }
+      cargado = true; pagina = 1; rango = { d: d, h: h, it: it, fuente: fuente };
       pintarKPIs(); pintarGrafico(); subtitulo(); pintarTabla();
       $("h-punto").className = "punto";
-    } catch (e) { console.error(e); datos = []; cargado = true; vacio("No fue posible consultar ThingSpeak. Intenta de nuevo."); $("h-punto").className = "punto bad"; }
+    } catch (e) {
+      console.error(e); datos = []; cargado = true;
+      vacio(fuente === "bd" ? "No fue posible consultar la base de datos. Intenta de nuevo en unos segundos (el servidor puede estar despertando)."
+        : "No fue posible consultar ThingSpeak. Revisa que el canal sea público o prueba con la fuente «Base de datos».");
+      $("h-punto").className = "punto bad";
+    }
     $("aplicar").disabled = false;
+  }
+  function pintarFuente() {
+    $("h-fuente-txt").textContent = FUENTE_TXT[fuente];
+    $("h-fuente-nota").textContent = fuente === "bd"
+      ? "Base de datos: guarda todo lo que el ESP32 envió al servidor (se leen hasta " + BD_LIMITE.toLocaleString("es-CO") + " lecturas por sensor)."
+      : "ThingSpeak: la misma fuente del Inicio, Alertas, el bot y Sinric.";
+    $("evo-sub").textContent = fuente === "bd" ? "Gráficos propios con los datos de la base de datos" : "Gráficos oficiales de ThingSpeak para el rango elegido";
   }
   function subtitulo() {
     const d = $("f-desde").value.split("-").reverse().join("/"), h = $("f-hasta").value.split("-").reverse().join("/");
     const it = $("f-int").selectedOptions[0].text.toLowerCase();
-    $("tabla-sub").textContent = datos.length + " registros · del " + d + " al " + h + " · " + (it === "datos originales" ? "datos originales" : "promedio " + it.replace("cada ", "cada "));
+    const modo = it === "datos originales" ? (fuente === "bd" ? "datos originales agrupados por minuto" : "datos originales") : "promedio " + it;
+    $("tabla-sub").textContent = datos.length + " registros · del " + d + " al " + h + " · " + modo + " · fuente: " + FUENTE_TXT[fuente] +
+      (truncado ? " · ⚠ se muestran solo las últimas " + BD_LIMITE.toLocaleString("es-CO") + " lecturas de cada sensor; acorta el rango" : "");
   }
   function vacio(msg) {
     datos = []; pintarKPIs(); $("tabla-sub").textContent = "Sin datos para mostrar";
@@ -82,15 +134,33 @@ montarLayout({ nuevo: true, estadoPropio: true, buscador: "Buscar por fecha, par
   function pintarKPIs() {
     const R = tsResumen(datos);
     TS_MEDIDAS.forEach(m => {
-      const t = $("hk-" + m.clave);
+      const t = $("hk-" + m.clave), sr = R[m.clave].serie;
       t.querySelector("[data-v]").textContent = fmtVal(m, R[m.clave].prom);
+      t.querySelector("[data-mm]").textContent = sr.length ? "Mín " + fmtNum(Math.min.apply(null, sr), m.dec) + " · Máx " + fmtNum(Math.max.apply(null, sr), m.dec) : "Sin lecturas en el período";
     });
+  }
+
+  /* Gráfica propia (fuente = base de datos). Si hay muchísimos puntos se reduce para que la página no se ponga lenta. */
+  function graficoBD(cont, m) {
+    let pts = datos.filter(x => x.v[m.clave] !== null).map(x => ({ t: x.t, v: x.v[m.clave] }));
+    if (!pts.length) { cont.innerHTML = '<div class="graf-aviso">Sin lecturas de ' + nombreMin(m) + ' en el período.</div>'; return; }
+    if (pts.length > 600) { const paso = Math.ceil(pts.length / 600); pts = pts.filter((_, i) => i % paso === 0 || i === pts.length - 1); }
+    const vs = pts.map(p => p.v); let lo = Math.min.apply(null, vs), hi = Math.max.apply(null, vs);
+    const pad = Math.max((hi - lo) * 0.15, 1); lo = Math.floor(lo - pad); hi = Math.ceil(hi + pad);
+    if (hi - lo < 4) { const c = (hi + lo) / 2; lo = Math.floor(c - 2); hi = Math.ceil(c + 2); }
+    if (lo < 0 && Math.min.apply(null, vs) >= 0) lo = 0;
+    lineaMulti(cont, { series: [{ nombre: m.nombre, color: m.color, eje: "izq", datos: pts }], izq: { min: lo, max: hi }, sinDer: true });
   }
 
   function pintarGrafico() {
     const cont = $("evo"), sel = param === "todos" ? TS_MEDIDAS : [tsMedida(param)];
     if (!datos.length || !rango) { cont.className = "evo"; cont.innerHTML = '<div class="graf-aviso">No hay datos en el período elegido.</div>'; return; }
     cont.className = "evo evo-grid" + (sel.length === 1 ? " uno" : "");
+    if (rango.fuente === "bd") {
+      cont.innerHTML = sel.map(m => '<div class="mini-graf"><h4 class="gcard-tag">' + m.nombre + (m.unidad ? " (" + m.unidad + ")" : "") + ' · Base de datos</h4><div class="gcard-cuerpo" data-hb="' + m.clave + '"></div></div>').join("");
+      cont.querySelectorAll("[data-hb]").forEach(c => graficoBD(c, tsMedida(c.dataset.hb)));
+      return;
+    }
     cont.innerHTML = sel.map(m => '<div class="mini-graf"><h4 class="gcard-tag">Campo ' + tsCfg().campos[m.clave] + ' · ThingSpeak</h4><div class="gcard-cuerpo" data-hf="' + m.clave + '"></div></div>').join("");
     cont.querySelectorAll("[data-hf]").forEach(c => tsMontarIframe(c, tsMedida(c.dataset.hf), { start: rango.d + " 00:00:00", end: rango.h + " 23:59:59", average: rango.it, tipo: "line" }));
   }
@@ -144,7 +214,7 @@ montarLayout({ nuevo: true, estadoPropio: true, buscador: "Buscar por fecha, par
       [fmtISO(x.t) + " " + dos(x.t.getHours()) + ":" + dos(x.t.getMinutes()) + ":" + dos(x.t.getSeconds())].concat(TS_MEDIDAS.map(m => x.v[m.clave] === null ? "" : x.v[m.clave])).join(",")));
     const blob = new Blob(["\ufeff" + lin.join("\r\n")], { type: "text/csv;charset=utf-8" });
     const a = document.createElement("a"); a.href = URL.createObjectURL(blob);
-    a.download = "agroia_historial_" + $("f-desde").value + "_a_" + $("f-hasta").value + ".csv";
+    a.download = "agroia_historial_" + (fuente === "bd" ? "bd_" : "thingspeak_") + $("f-desde").value + "_a_" + $("f-hasta").value + ".csv";
     document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 2000);
     avisarToast("Se descargaron " + f.length + " registros.");
   }
@@ -157,17 +227,27 @@ montarLayout({ nuevo: true, estadoPropio: true, buscador: "Buscar por fecha, par
     texto = q; pagina = 1; if (cargado) pintarTabla();
   };
 
+  // rangos rápidos: cada uno elige también un intervalo que tenga sentido para ese tiempo
+  const RAPIDOS = { 0: "10", 1: "30", 6: "60", 29: "240" };
+  function marcarRapido(dias) { $("rapido-rango").querySelectorAll("button[data-dias]").forEach(b => b.classList.toggle("on", dias !== null && +b.dataset.dias === dias)); }
+  $("rapido-rango").querySelectorAll("button[data-dias]").forEach(b => b.onclick = () => {
+    const dias = +b.dataset.dias, ahora = new Date();
+    $("f-hasta").value = fmtISO(ahora); $("f-desde").value = fmtISO(new Date(ahora.getTime() - dias * 86400000));
+    $("f-int").value = RAPIDOS[dias]; marcarRapido(dias); aplicar();
+  });
+  $("f-desde").addEventListener("change", () => marcarRapido(null)); $("f-hasta").addEventListener("change", () => marcarRapido(null));
+  $("f-fuente").onchange = () => aplicar();
   $("aplicar").onclick = aplicar; $("csv").onclick = descargarCSV;
   $("f-filas").onchange = () => { PP = parseInt($("f-filas").value, 10); pagina = 1; pintarTabla(); };
   $("f-param").onchange = () => fijarParam($("f-param").value);
   $("fr-reset").onclick = () => {
     param = "todos"; texto = ""; $("buscador").value = ""; $("f-param").value = "todos"; $("f-int").value = "60";
-    $("f-desde").value = fmtISO(hace7); $("f-hasta").value = fmtISO(hoy); pintarRapidos(); aplicar();
+    $("f-desde").value = fmtISO(hace7); $("f-hasta").value = fmtISO(hoy); marcarRapido(6); pintarRapidos(); aplicar();
   };
   let rz; window.addEventListener("resize", () => { clearTimeout(rz); rz = setTimeout(() => { if (cargado && datos.length) pintarGrafico(); }, 150); });
 
   // ---- estado del sistema (independiente del rango consultado)
   async function estado() { try { tsPintarEstado(await tsFeeds({ results: 1 })); } catch (e) { setEstadoSistema("bad", "Sin conexión con ThingSpeak", null); } }
 
-  pintarRapidos(); estado(); setInterval(estado, tsCfg().refrescoSegundos * 1000); aplicar();
+  pintarRapidos(); marcarRapido(6); pintarFuente(); estado(); setInterval(estado, tsCfg().refrescoSegundos * 1000); aplicar();
 })();

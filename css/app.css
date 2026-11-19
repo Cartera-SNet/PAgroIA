@@ -328,3 +328,40 @@ select.inp{appearance:none;-webkit-appearance:none;padding-right:34px;background
 .fr-item .fr-ico .ph-txt.tres{font-size:8px}
 .kpis-lado .ph-txt.tres{font-size:10px}
 
+
+/* ---------- Chat con Agro: micrófono, voz y estado ---------- */
+.agro-estado{min-height:0;height:0;overflow:hidden;padding:0 24px;font-size:12.5px;color:#14633f;font-weight:500;opacity:0;transition:opacity .15s}
+.agro-estado.on{height:auto;min-height:22px;padding:4px 24px 8px;opacity:1}
+.btn-mic,.btn-voz{flex:none;width:48px;height:48px;border-radius:9px;border:1px solid var(--borde);background:#f6fbf8;color:#14633f;display:grid;place-items:center;cursor:pointer}
+.btn-mic .ic,.btn-voz .ic{width:21px;height:21px}
+.btn-mic:hover:not(:disabled),.btn-voz:hover{background:#e8f6ed;border-color:#8fcfa9}
+.btn-mic.escuchando{background:#dc2626;border-color:#dc2626;color:#fff;animation:agroPulso 1.2s ease-in-out infinite}
+.btn-mic:disabled{opacity:.45;cursor:not-allowed}
+.btn-voz.off{color:#8b9aa6;background:#f1f4f2}
+@keyframes agroPulso{0%{box-shadow:0 0 0 0 rgba(220,38,38,.45)}70%{box-shadow:0 0 0 12px rgba(220,38,38,0)}100%{box-shadow:0 0 0 0 rgba(220,38,38,0)}}
+@media (prefers-reduced-motion:reduce){.btn-mic.escuchando{animation:none}}
+@media (max-width:640px){.agro-estado,.agro-estado.on{padding-left:14px;padding-right:14px}.btn-mic,.btn-voz{width:42px;height:44px}.chat-panel .chat-form{gap:6px;padding:10px 10px}}
+
+/* ---------- Historial: más claro ---------- */
+.rapido-rango{display:flex;align-items:center;flex-wrap:wrap;gap:8px;margin:-4px 2px 2px;font-size:12.5px;color:var(--gris)}
+.rapido-rango>span{font-weight:600;color:#33475a;margin-right:2px}
+.rapido-rango button{padding:6px 13px;border-radius:999px;border:1px solid #cfe0d6;background:#f6fbf8;color:#14633f;font-size:12.5px;font-weight:500;cursor:pointer}
+.rapido-rango button:hover{background:#e8f6ed}
+.rapido-rango button.on{background:var(--verde-btn);border-color:var(--verde-btn);color:#fff}
+.rapido-rango small{flex:1 1 260px;font-size:11.5px;color:var(--gris);margin-left:6px}
+.kpi-mm{display:block;margin-top:2px;font-size:11.5px;color:#46605a;font-weight:500}
+.kpis-lado .kpi-mm{font-size:10.5px}
+/* la tabla se ajusta al ancho disponible: sin barra de desplazamiento horizontal en pantallas normales */
+.panel-tabla .tabla-reg{min-width:0;table-layout:auto}
+.panel-tabla .tabla-reg th{padding:11px 10px;font-size:11.5px}
+.panel-tabla .tabla-reg td{padding:11px 10px;font-size:13px}
+.panel-tabla .tabla-reg th:first-child,.panel-tabla .tabla-reg td:first-child{padding-left:20px}
+.panel-tabla .tabla-reg th:last-child,.panel-tabla .tabla-reg td:last-child{width:44px;padding-left:4px;padding-right:12px}
+.tabla-reg th .ic,.tabla-reg td .ic{margin-right:4px}
+.tabla-leyenda{display:flex;align-items:center;gap:8px;margin:0;padding:10px 20px 0;font-size:11.5px;color:var(--gris)}
+.tabla-leyenda .ley-fuera{flex:none;width:10px;height:10px;border-radius:50%;background:#b45309}
+@media (max-width:640px){.tabla-leyenda{padding:10px 14px 0}.panel-tabla .tabla-reg{min-width:520px}}
+.rapido-rango .rr-fuente{display:flex;align-items:center;gap:8px;margin-left:auto;font-size:12.5px;font-weight:600;color:#33475a}
+.rapido-rango .rr-fuente .inp-peq{height:34px;min-width:150px;font-weight:500}
+.rapido-rango small{order:5;flex:1 1 100%;margin-left:0}
+@media (max-width:640px){.rapido-rango .rr-fuente{margin-left:0;flex:1 1 100%}}
