@@ -1,5 +1,5 @@
 // Configuración central de la página.
-const VERSION_PAGINA = "10.13";
+const VERSION_PAGINA = "10.15";
 // Dirección de la API:
 //  - abriendo la página en este computador (localhost / archivo local) -> backend local
 //  - publicada (Railway u otro hosting) -> API desplegada.

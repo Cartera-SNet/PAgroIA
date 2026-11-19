@@ -142,6 +142,11 @@ async function responderBase(it) {
     case "led":
       if (!it.accion) return { html: (it.ambiguo ? "No estoy seguro de qué quieres hacer con el LED. ¿Quieres encenderlo o apagarlo?" : "¿Quieres <b>encender</b> o <b>apagar</b> el LED?") + "<br>" + CHIPS_LED, nota: "" };
       return await chatEnviarLed(it.accion);
+    case "pantalla": {
+      const P = chatPantalla();
+      if (!P) return { html: "No logro ver en qué pantalla estás. Dime el nombre de la sección (Inicio, Monitoreo, Historial, Predicción…) y te explico qué hay ahí.", nota: "" };
+      return { html: "Estás en <b>" + P.nombre + "</b>. Aquí ves " + P.desc + (P.detalle ? "<br><br>" + P.detalle : "") + "<br><br>¿Quieres que te explique algo en particular de esta pantalla?", nota: "" };
+    }
     case "enlaces": return { html: "🌐 <a href=\"" + location.origin + "/dashboard.html\" target=\"_blank\" rel=\"noopener\">Tablero web</a><br>📈 <a href=\"" + tsPublicUrl() + "\" target=\"_blank\" rel=\"noopener\">Gráficos en ThingSpeak</a><br>🔧 <a href=\"" + API_BASE_URL + "/docs\" target=\"_blank\" rel=\"noopener\">API (documentación)</a>", nota: "" };
     case "yolo": return { html: "El modelo de imágenes (YOLO) distingue <b>suelo húmedo</b> y <b>suelo seco</b>. Usa <b>Analizar imagen</b> o <b>Cámara en vivo</b> en el menú <i>Predicción</i>.", nota: "" };
     case "proyecto": return { html: "AgroIA es un sistema de diagnóstico de fertilidad del suelo (Inteligencia Artificial 26-2, CUL). Un ESP32 mide temperatura, humedad del aire, humedad del suelo y TDS (sólidos disueltos); envía los datos a una base de datos y a ThingSpeak; esta página los muestra, analiza fotos del suelo con YOLO y acepta órdenes para el ESP32.", nota: "" };
@@ -233,8 +238,47 @@ function chatAnotar(rol, texto) {
 }
 
 /* Lecturas reales + rangos, en texto, para que la IA responda con datos del cultivo y no invente */
+/* ---------- qué pantalla está viendo la persona ----------
+   Con el chat flotante (iframe) se lee la página de atrás (mismo sitio, se puede leer). En el chat completo la pantalla es el propio chat. */
+const PANTALLAS = {
+  "dashboard.html": ["Inicio", "el tablero principal: arriba las 4 tarjetas con la última lectura (temperatura, humedad del aire, humedad del suelo y TDS) y cuánto cambiaron; en medio las 4 gráficas originales de ThingSpeak con su nivel óptimo, alto o bajo; y la tarjeta «Clasificación de fertilidad (IA)» con un chat pequeño de Agro."],
+  "monitoreo.html": ["Monitoreo en tiempo real", "las 4 tarjetas con la lectura actual y las 4 gráficas de ThingSpeak en vivo (se actualizan solas cada 15 segundos). Abajo hay un botón para abrir el canal en ThingSpeak."],
+  "historial.html": ["Historial de datos", "las lecturas guardadas. Arriba eliges el rango de fechas, el parámetro y el intervalo (hay rangos rápidos y un selector de fuente: base de datos o ThingSpeak). Abajo salen los promedios (mínimo y máximo), las gráficas y una tabla con páginas que se puede descargar en CSV para Excel."],
+  "prediccion.html": ["Análisis de fertilidad del suelo", "un formulario donde escribes temperatura, humedad del aire, humedad del suelo y TDS (o usas la última lectura) y pulsas «Analizar» para que la IA diga qué tan fértil está el suelo. También hay pestañas para analizar una imagen (YOLO) y la cámara en vivo."],
+  "vision.html": ["Analizar imagen", "subes una foto del suelo y el modelo YOLO dice si se ve húmedo o seco."],
+  "camara.html": ["Cámara en vivo", "la cámara del suelo en vivo, analizada por el modelo YOLO."],
+  "alertas.html": ["Alertas", "las alertas cuando una medición sale de su rango normal."],
+  "teclado.html": ["Teclado LCD", "un teclado en pantalla para manejar el menú de la pantalla LCD del ESP32; tiene tres partes: Teclado, Pantalla LCD y Consola."],
+  "configuracion.html": ["Configuración del sistema", "la conexión con ThingSpeak, las notificaciones, las preferencias y, para el administrador, el respaldo y la pausa del sistema."],
+  "chat.html": ["Chat con Agro", "el chat donde me puedes preguntar por los sensores, el estado del cultivo, si regar, o pedirme encender y apagar el LED."],
+  "diagnostico.html": ["Diagnóstico de datos", "una página oculta que revisa si el ESP32 está enviando datos y si llegan a la base de datos y a ThingSpeak."],
+  "comparacion.html": ["Comparación de fuentes", "una página oculta que compara la base de datos con ThingSpeak: cuántos registros tiene cada una y sus promedios."]
+};
+function chatPantalla() {
+  let loc = location, doc = null;
+  if (/[?&]embed=1/.test(location.search)) { try { loc = parent.location; doc = parent.document; loc.pathname; } catch (e) { return null; } }
+  else doc = null;
+  const arch = (loc.pathname.split("/").pop() || "index.html").toLowerCase();
+  const info = PANTALLAS[arch === "index.html" ? "dashboard.html" : arch];
+  if (!info) return null;
+  const r = { nombre: info[0], desc: info[1], detalle: "" };
+  if (arch === "historial.html" && doc) {
+    const v = id => { const e = doc.getElementById(id); return e ? e : null; };
+    const op = id => { const e = v(id); return e && e.selectedOptions && e.selectedOptions[0] ? e.selectedOptions[0].textContent.trim() : ""; };
+    const pf = [], d = v("f-desde"), h = v("f-hasta");
+    if (d && h && d.value) pf.push("del " + d.value + " al " + h.value);
+    if (op("f-param")) pf.push("parámetro: " + op("f-param"));
+    if (op("f-int")) pf.push("intervalo: " + op("f-int"));
+    if (op("f-fuente")) pf.push("fuente: " + op("f-fuente"));
+    if (pf.length) r.detalle = "Ahora tiene: " + pf.join("; ") + ".";
+  }
+  return r;
+}
+
 async function chatContexto() {
   let t = "Fecha y hora actual en Colombia: " + new Date().toLocaleString("es-CO", { timeZone: TZ_CO }) + ".\n";
+  const P = chatPantalla();
+  if (P) t += "Pantalla que la persona está viendo ahora: «" + P.nombre + "» — " + P.desc + (P.detalle ? " " + P.detalle : "") + " Si pregunta qué ve o qué es esto, explícale esa pantalla en lenguaje simple.\n";
   let D; try { D = await chatDatos(); } catch (e) { D = { error: "x" }; }
   if (!D || D.error) return t + "No hay lecturas de los sensores disponibles ahora (ThingSpeak no respondió o el canal no tiene datos).";
   t += "Última lectura hace " + haceTxt(D.hace) + " (" + fmtFechaHora(D.ult) + ").\n";
@@ -272,7 +316,7 @@ function chatSugerencias(texto) {
 }
 
 /* Lo que siempre se contesta aquí mismo (órdenes del ESP32 y conversación básica): no se manda a la IA */
-const CHAT_LOCAL_SIEMPRE = ["vacio", "saludo", "gracias", "adios", "ayuda", "enlaces", "led", "led_ayuda", "led_estado", "led_sin_objeto", "otro_aparato"];
+const CHAT_LOCAL_SIEMPRE = ["vacio", "saludo", "gracias", "adios", "ayuda", "enlaces", "led", "led_ayuda", "led_estado", "led_sin_objeto", "otro_aparato", "pantalla"];
 
 /* Consejos y conocimiento: con pocas palabras ("¿Necesito regar?") se contestan aquí; con más palabras ("Qué abono me recomiendas
    para sembrar tomate") la IA responde mejor, porque la palabra clave sola puede ser engañosa. */

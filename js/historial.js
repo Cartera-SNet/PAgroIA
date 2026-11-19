@@ -1,7 +1,7 @@
 /* ==========================================================
    AgroIA - Historial de datos (datos reales)
    Fuente a elegir: la base de datos (por defecto; todo lo que el ESP32 envió al servidor) o ThingSpeak (la misma del Inicio).
-   Al cargar una fuente se consulta también la otra y se muestran sus conteos y promedios lado a lado («Comparación de fuentes»).
+   La comparación entre las dos fuentes está en una página oculta aparte: comparacion.html (no está en el menú, como diagnostico.html).
    Rango de fechas + parámetro + intervalo (promedio), gráficos, tabla paginada, resumen (promedio, mínimo, máximo) y CSV.
    ========================================================== */
 montarLayout({ nuevo: true, estadoPropio: true, buscador: "Buscar por fecha, parámetro o tipo de dato..." });
@@ -127,14 +127,12 @@ montarLayout({ nuevo: true, estadoPropio: true, buscador: "Buscar por fecha, par
       if (!datos.length) vacio("No hay datos de " + FUENTE_TXT[fuente] + " del " + d.split("-").reverse().join("/") + " al " + h.split("-").reverse().join("/") +
         (fuente === "bd" ? ". Puede que el ESP32 todavía no envíe sus lecturas a la base de datos." : "."), true);
       else { pintarKPIs(); pintarGrafico(); subtitulo(); pintarTabla(); }
-      comparar(mia, d, h, it);
     } catch (e) {
       if (mia !== ronda) return;
       console.error(e); datos = []; cargado = true;
       vacio(fuente === "bd" ? "No fue posible consultar la base de datos. Intenta de nuevo en unos segundos (el servidor puede estar despertando)."
         : "No fue posible consultar ThingSpeak. Revisa que el canal sea público o prueba con la fuente «Base de datos».", true);
       $("h-punto").className = "punto bad";
-      $("cmp").hidden = true;
     }
     clearTimeout(tAviso);
     if (mia === ronda) $("aplicar").disabled = false;
@@ -152,39 +150,9 @@ montarLayout({ nuevo: true, estadoPropio: true, buscador: "Buscar por fecha, par
       $("pag").innerHTML = ""; $("pag-info").textContent = "";
     };
     poner(base);
-    $("cmp").hidden = true;
     if (fuente === "bd") tAviso = setTimeout(() => poner(base + " El servidor estaba dormido; despertándolo, puede tardar hasta 30 segundos."), 4000);
   }
 
-  /* Comparación de fuentes: consulta la OTRA fuente para el mismo rango e intervalo y muestra registros y promedios lado a lado. */
-  const TOL = { temp: 0.3, humAire: 1, humSuelo: 1, tds: 5 }, ETQ_CMP = { temp: "Temperatura", humAire: "Humedad aire", humSuelo: "Humedad suelo", tds: "TDS" };         // diferencia de promedios que se considera «coincide»
-  async function comparar(mia, d, h, it) {
-    const otra = OTRA[fuente], caja = $("cmp"), cuerpo = $("cmp-cuerpo");
-    caja.hidden = false; cuerpo.innerHTML = '<p class="cmp-nota">Comparando con ' + FUENTE_TXT[otra] + '…</p>';
-    let r2 = null;
-    try { r2 = await consultar(otra, d, h, it); } catch (e) { console.error(e); }
-    if (mia !== ronda) return;
-    if (!r2) { cuerpo.innerHTML = '<p class="cmp-nota">No se pudo consultar ' + FUENTE_TXT[otra] + ' para compararla.</p>'; return; }
-    const por = { [fuente]: datos, [otra]: r2.feeds }, R = { bd: tsResumen(por.bd), ts: tsResumen(por.ts) };
-    const nb = por.bd.length, nt = por.ts.length;
-    let estado, cls;
-    if (!nb && !nt) { estado = "Ninguna de las dos fuentes tiene datos en este rango."; cls = "warn"; }
-    else if (!nb || !nt) { estado = (nb ? "Solo la base de datos" : "Solo ThingSpeak") + " tiene datos en este rango. La otra fuente no recibió lecturas de estas fechas."; cls = "warn"; }
-    else {
-      const difs = TS_MEDIDAS.filter(m => R.bd[m.clave].prom !== null && R.ts[m.clave].prom !== null && Math.abs(R.bd[m.clave].prom - R.ts[m.clave].prom) > TOL[m.clave]);
-      const difN = Math.abs(nb - nt) / Math.max(nb, nt) > 0.05;
-      if (!difs.length && !difN) { estado = "✔ Las dos fuentes coinciden en este rango."; cls = "ok"; }
-      else { estado = "⚠ Las fuentes difieren" + (difN ? " en la cantidad de registros" : "") + (difs.length ? (difN ? " y" : " en") + " los promedios de " + difs.map(m => nombreMin(m)).join(", ") : "") +
-        ". Pasa cuando el ESP32 no envía lo mismo a las dos."; cls = "warn"; }
-    }
-    const fila = (t, a, b, dif) => '<tr><th scope="row">' + t + '</th><td>' + a + '</td><td>' + b + '</td><td>' + dif + '</td></tr>';
-    cuerpo.innerHTML = '<p class="cmp-estado ' + cls + '">' + estado + '</p>' +
-      '<p class="cmp-nota cmp-sub">Cantidad de registros y promedio de cada parámetro en el período.</p><table class="cmp-tabla"><thead><tr><th></th><th>Base de datos</th><th>ThingSpeak</th><th>Diferencia</th></tr></thead><tbody>' +
-      fila("Registros", nb, nt, Math.abs(nb - nt)) +
-      TS_MEDIDAS.map(m => { const a = R.bd[m.clave].prom, b = R.ts[m.clave].prom;
-        return fila(ETQ_CMP[m.clave] + (m.unidad ? " (" + m.unidad + ")" : ""), fmtNum(a, m.dec), fmtNum(b, m.dec), a === null || b === null ? "—" : fmtNum(Math.abs(a - b), m.dec)); }).join("") +
-      '</tbody></table><p class="cmp-nota">Mismo rango, mismo intervalo, misma hora de Colombia y mismos decimales en las dos fuentes.</p>';
-  }
   function pintarFuente() {
     $("h-fuente-txt").textContent = FUENTE_TXT[fuente];
     $("h-fuente-nota").textContent = fuente === "bd"

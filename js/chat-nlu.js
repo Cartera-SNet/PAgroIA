@@ -80,7 +80,7 @@
     "rango", "ideal", "optimo", "adecuado", "normal", "limite",
     "linea", "conectado", "funcionando", "funciona", "sensor", "sensores", "dispositivo",
     "ayuda", "ejemplos", "comandos", "hola", "buenas", "buenos", "gracias", "adios", "chao",
-    "agroia", "proyecto", "equipo", "enlaces", "enlace", "link", "pagina", "grafico", "graficos", "thingspeak", "yolo", "modelo", "foto", "imagen", "camara",
+    "pantalla", "panel", "viendo", "veo", "vista", "seccion", "ventana", "agroia", "proyecto", "equipo", "enlaces", "enlace", "link", "pagina", "grafico", "graficos", "thingspeak", "yolo", "modelo", "foto", "imagen", "camara",
     "significa", "explica", "explicame", "sirve", "importa",
     // LED: acciones, estados y objeto
     "enciende", "encender", "encienda", "enciendo", "prende", "prender", "prenda", "activa", "activar", "pon", "poner", "ponga",
@@ -235,6 +235,9 @@
     if (/^(gracias|muchas gracias|ok gracias|listo gracias|genial gracias)\b|\bmuchas gracias\b/.test(n)) { r.id = "gracias"; return r; }
     if (/^(adios|chao|hasta luego|nos vemos)\b/.test(n)) { r.id = "adios"; return r; }
     if (!vars.length && /\b(ayuda|ejemplos|comandos|que puedes|que sabes|que haces|como te uso|menu)\b/.test(n)) { r.id = "ayuda"; return r; }
+    // «¿qué veo en este panel?», «¿qué estoy viendo?», «¿dónde estoy?», «¿para qué sirve esta página?»
+    if (/\b(que|cual|como)\b.*\b(veo|viendo|ve|miro|mirando)\b|\b(este|esta|esto|aqui|actual)\b.*\b(panel|pantalla|pagina|seccion|ventana|vista)\b|\bdonde estoy\b|\ben que (pantalla|pagina|seccion|panel) estoy\b|^que es esto$|^que hay (aqui|en esta)\b/.test(n) &&
+        !/\b(grafica|grafico|graficas|graficos)\b.*\b(temperatura|humedad|tds)\b/.test(n)) { r.id = "pantalla"; return r; }
     if (vars.length && /^(y )?(que es|que significa|que mide|explica|explicame|dime que es)\b|\bpara que sirve\b|\bpor que importa\b/.test(n)) { r.id = "definicion"; return r; }
     if (!vars.length && /\b(link|enlace|enlaces|pagina|dashboard|tablero|thingspeak|grafico|graficos)\b/.test(n)) { r.id = "enlaces"; return r; }
     if (!vars.length && /\b(yolo|modelo|foto|imagen|camara|vision|analiza|analizar|analizo|analisis|detecta|detectar)\b/.test(n)) { r.id = "yolo"; return r; }

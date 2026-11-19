@@ -1,0 +1,65 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<title>AgroIA · Comparación de fuentes</title>
+<style>
+  :root{--verde:#0f5132;--v2:#198754;--gris:#5b6b62;--borde:#dfe7e2;--fondo:#f3f6f4;--rojo:#b42318;--ambar:#b54708}
+  *{box-sizing:border-box}
+  body{margin:0;font-family:Inter,system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;background:var(--fondo);color:#16251d;line-height:1.45}
+  main{max-width:900px;margin:0 auto;padding:22px 16px 60px}
+  h1{margin:0 0 4px;font-size:24px;color:var(--verde)} h2{font-size:17px;margin:0 0 10px;color:var(--verde)}
+  p.sub{margin:0 0 16px;color:var(--gris)}
+  .card{background:#fff;border:1px solid var(--borde);border-radius:14px;padding:16px;margin:0 0 14px;box-shadow:0 1px 2px rgba(0,0,0,.03)}
+  .fila{display:flex;flex-wrap:wrap;gap:10px;align-items:end}
+  label{display:flex;flex-direction:column;font-size:12px;color:var(--gris);gap:4px;flex:1 1 160px}
+  input,select{padding:9px 10px;border:1px solid var(--borde);border-radius:9px;font-size:14px;font-family:inherit;background:#fff}
+  button{background:var(--v2);color:#fff;border:0;border-radius:10px;padding:10px 18px;font-size:14px;font-weight:600;cursor:pointer}
+  button:disabled{opacity:.6;cursor:wait}
+  .veredicto{padding:12px 14px;border-radius:10px;font-weight:600;margin:0 0 12px}
+  .veredicto.ok{background:#ecfdf3;border:1px solid #abefc6;color:#05603a}
+  .veredicto.warn{background:#fffaeb;border:1px solid #fedf89;color:var(--ambar)}
+  .veredicto.info{background:#eff8ff;border:1px solid #b2ddff;color:#175cd3}
+  table{width:100%;border-collapse:collapse;font-size:14px} th,td{padding:8px 8px;border-bottom:1px solid var(--borde);text-align:right;vertical-align:top}
+  th:first-child,td:first-child{text-align:left} thead th{color:var(--gris);font-weight:600;font-size:12px}
+  tbody th{font-weight:500;text-align:left}
+  .tabla{overflow-x:auto} .peq{font-size:12.5px;color:var(--gris);margin:10px 0 0}
+  a{color:var(--v2)}
+</style>
+</head>
+<body>
+<main>
+  <h1>Comparación de fuentes</h1>
+  <p class="sub">Compara lo que hay en la <b>base de datos</b> y en <b>ThingSpeak</b> para el mismo rango de fechas y el mismo intervalo: cuántos registros tiene cada una y el promedio de cada parámetro. Sirve para ver si el ESP32 está enviando lo mismo a los dos sitios. Esta página no está en el menú (como el <a href="diagnostico.html">diagnóstico de datos</a>).</p>
+
+  <div class="card">
+    <div class="fila">
+      <label>Desde<input type="date" id="desde"></label>
+      <label>Hasta<input type="date" id="hasta"></label>
+      <label>Intervalo
+        <select id="int">
+          <option value="0">Datos originales</option><option value="10">Cada 10 minutos</option><option value="30">Cada 30 minutos</option>
+          <option value="60" selected>Cada 1 hora</option><option value="240">Cada 4 horas</option><option value="720">Cada 12 horas</option><option value="1440">Cada día</option>
+        </select></label>
+      <button id="ir">Comparar ahora</button>
+    </div>
+  </div>
+
+  <div class="card" id="res" hidden>
+    <h2>Resultado</h2>
+    <div id="veredicto" class="veredicto"></div>
+    <div class="tabla"><table>
+      <thead><tr><th></th><th>Base de datos</th><th>ThingSpeak</th><th>Diferencia</th></tr></thead>
+      <tbody id="filas"></tbody>
+    </table></div>
+    <p class="peq" id="nota"></p>
+  </div>
+</main>
+<script src="js/config.js"></script>
+<script src="js/tds-bd.js"></script>
+<script src="js/ts.js"></script>
+<script src="js/comparacion.js"></script>
+</body>
+</html>
