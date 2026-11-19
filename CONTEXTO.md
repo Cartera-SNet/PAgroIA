@@ -2,7 +2,7 @@
 
 | | |
 |---|---|
-| **Versión del documento** | **v1.8** |
+| **Versión del documento** | **v1.9** |
 | **Última actualización** | 17 de noviembre de 2026 |
 | **Proyecto** | AgroIA — Diagnóstico de fertilidad del suelo |
 | **Asignatura** | Inteligencia Artificial 26-2 · CUL · Docente: Bryan Josser Fernández Ebrath |
@@ -97,8 +97,16 @@ Los nombres antiguos («Temperatura», «Humedad ambiental», «TDS del suelo»,
 ## 4. Backend (`AgroIABackend`)
 
 - **Tecnología:** FastAPI + SQLAlchemy + Neon. **Despliegue:** `Dockerfile` (`python:3.12-slim` + `libxcb1`, `libgl1`, `libglib2.0-0`, OpenCV headless). `railway.toml` con `builder = "DOCKERFILE"`, arranque `uvicorn main:app --host 0.0.0.0 --port $PORT`, healthcheck `/docs`. Hay `.dockerignore`; `imagenes/` y `uploads/` no van al despliegue; `models/best.pt` sí.
-- **Variables de entorno en Railway** (solo nombres): `DATABASE_URL` (crítica), `SECRET_KEY`, `ALGORITHM` (HS256), `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `GOOGLE_REDIRECT_URI` (opcionales), `INFLUXDB_URL` / `INFLUXDB_DATABASE` / `INFLUXDB_TOKEN` (**no se usan en la nube**).
-- **Rutas principales:** `/auth`, `/users`, `/zonas_geograficas`, `/tipos_suelo`, `/lotes`, `/tipos_sensor`, `/sensores`, `/parametros`, `/muestras`, `/alertas`, `/consultas-llm`, `/iot`, `/vision` (`/analizar`, `/camara`, stream), `/menu`, `/esp32`.
+- **Variables de entorno en Railway** (solo nombres): `DATABASE_URL` (crítica), `BACKUP_CLAVE` (clave maestra de administración; **solo en Railway**), `SECRET_KEY`, `ALGORITHM` (HS256), `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `GOOGLE_REDIRECT_URI` (opcionales), `INFLUXDB_URL` / `INFLUXDB_DATABASE` / `INFLUXDB_TOKEN` (**no se usan en la nube**).
+- **Rutas principales:** `/auth`, `/users`, `/zonas_geograficas`, `/tipos_suelo`, `/lotes`, `/tipos_sensor`, `/sensores`, `/parametros`, `/muestras`, `/alertas`, `/consultas-llm`, `/iot`, `/vision` (`/analizar`, `/camara`, stream), `/menu`, `/esp32`, `/admin`.
+- **Administración (v1.9) — respaldo y pausa de recepción** (`app/routes/admin_routes.py`, `app/core/admin_clave.py`, `app/services/respaldo_service.py`, `app/crud/ajuste_sistema_crud.py`, `app/models/ajuste_sistema_model.py`):
+  - **Clave maestra:** la lee de la variable de entorno **`BACKUP_CLAVE`** (Railway). **Nunca está en el código ni en la página.** Si la variable no existe, estas rutas responden 503 (cerradas). La clave viaja en la cabecera `X-Admin-Clave`. Protección: 5 intentos fallidos por origen → bloqueo de 15 min; tope global de 30 fallos / 15 min (429).
+  - `GET /admin/estado` (público): `{recepcion: "activada" | "pausada", clave_configurada}`.
+  - `POST /admin/recepcion` `{accion: "pausar" | "activar"}` (con clave): fija la pausa. **Pausada:** `POST /muestras/create` **no guarda nada** y responde **202** `{ok:false, pausado:true}` (el ESP32 lo ve como «no guardado»; ThingSpeak no se afecta). La pausa **queda guardada en la base de datos** (tabla `ajustes_sistema`, se crea sola la primera vez con `CREATE TABLE IF NOT EXISTS`) y **sobrevive a reinicios**. Si el estado no se puede leer, se guarda la muestra (falla abierta) y se anota en el log.
+  - `POST /admin/respaldo` (con clave): descarga un **.zip con un CSV por tabla** + `LEEME.txt` (fecha y filas por tabla). **Incluye los datos de los usuarios con su contraseña** (hoy en texto plano, ver §12): el archivo debe guardarse en privado.
+  - **Si el usuario de Neon no puede crear tablas:** ejecutar una vez en el editor SQL de Neon: `CREATE TABLE IF NOT EXISTS ajustes_sistema ("Ajuste_Clave" VARCHAR(50) PRIMARY KEY, "Ajuste_Valor" VARCHAR(200) NOT NULL, "Ajuste_FechaActualizacion" TIMESTAMP NOT NULL);`
+  - **Interfaz:** tarjeta «Administración (respaldo y pausa)» en `pages/configuracion.html` (`js/admin.js`): campo de clave (no se guarda en el navegador), botones Descargar respaldo / Pausar / Reanudar y el estado actual.
+  - **Pendiente de Víctor:** crear la variable `BACKUP_CLAVE` en Railway; la clave que se usó al principio **se escribió en un chat** (está expuesta): cambiarla después solo exige editar esa variable, sin tocar código.
 - **`/menu/*` (menú LCD del ESP32, teclas 2–7 y A):** `ultimo-registro`, `promedio-24h`, `max-min-hoy`, `promedio-por-hora`, `muestras-por-dia`, `dias-bajo-umbral`, `desviacion`. Respuesta: `{linea1, linea2, detalle}` (línea1 y línea2 ≤ 16 caracteres, para la LCD 16×2). Abreviaturas: **T** temperatura · **A** humedad del aire · **S** humedad del suelo · **D** TDS (ppm). Las teclas 1, 8, 9, 0 y B son locales del ESP32.
 - **`/esp32/comando`:** `GET` (el ESP32 consulta; devuelve `{accion: "" | "encender_led" | "apagar_led"}` y limpia) y `POST` (`{accion}` para fijar la orden; **abierto, sin token**). Vive en la memoria del proceso. **Lo usa el chat web para encender y apagar el LED.**
 - **InfluxDB:** no hay instancia en la nube. `/iot/ultima-medicion`, `/iot/historial`, `/vision/fusion` y `/vision/reporte-pdf` fallan por eso; la interfaz los tiene **ocultos** (decisión del equipo: el profesor no exige Influx).
@@ -361,8 +369,8 @@ Cada **60 s** lee los datos **filtrados por variable** y los envía a dispositiv
 
 | Pieza | Versión / estado | Runtime | Dependencias principales |
 |---|---|---|---|
-| Documento | v1.8 | — | — |
-| Frontend | build v1.8 (v1.6 + modelo de ML en Predicción) | HTML/CSS/JS sin librerías; `serve.py` (Python 3) | `requirements.txt` vacío a propósito |
+| Documento | v1.9 | — | — |
+| Frontend | build v1.9 (página 10.3: v1.8 + administración en Configuración) | HTML/CSS/JS sin librerías; `serve.py` (Python 3) | `requirements.txt` vacío a propósito |
 | Backend | código del equipo (`bbf1923`) + 3 archivos (v1.6) | `python:3.12-slim` (Dockerfile) | `fastapi==0.115.12`, `uvicorn==0.34.2`, `starlette==0.46.2`, `SQLAlchemy==2.0.40`, `psycopg2-binary==2.9.12`, `pydantic==2.11.3`, `python-jose==3.5.0`, `python-multipart==0.0.32`, `python-dotenv==1.1.0`, `google-auth==2.59.0`, `httpx==0.28.1`, `requests==2.34.2`, `numpy==2.5.3`, `pillow==12.3.0`, `opencv-python-headless==4.10.0.84`, `reportlab==5.0.1`, `torch==2.14.0`, `torchvision==0.29.0`, `ultralytics==8.4.163`, `ultralytics-platform==0.1.65`, `ultralytics-thop==2.1.6` (70 líneas en total) |
 | Bot de Telegram | v2 (+corrector, LED, TDS, reintentos) | Railpack de Railway (la versión de Python del bot: *por confirmar*) | `python-telegram-bot[webhooks]`, `requests`, `python-dotenv`, `groq` (sin versión fijada) |
 | Puente Sinric | v2 (+`USAR_API=0`) | Railpack 0.43.0, Python 3.13.16 | `requests`, `sinricpro` |
@@ -502,12 +510,21 @@ npm i puppeteer-core @sparticuz/chromium     # navegador sin pantalla para proba
 1. **Sube a la conversación nueva:** este archivo (`AgroIA_CONTEXTO.md`) y, si va a tocar código, los zips que correspondan (`AgroIABackend_completo_sleep.zip`, `AgroIA_frontend_web.zip`, `AgroIA_bot_telegram.zip`, `AGROIA-ASISTENTE_sinric_sin_API.zip`). Las capturas de Railway o ThingSpeak ayudan mucho.
 2. **Pega este prompt:**
 
-> Hola. Continúo el proyecto **AgroIA** (IA 26-2, CUL). Soy Víctor y hablo español de Colombia. Adjunto `AgroIA_CONTEXTO.md` (v1.8): es toda la memoria del proyecto. **Léelo completo antes de responder** y sigue sus **reglas de trabajo (§17)**. Primero resúmeme en 10 líneas dónde estamos y qué es lo más urgente, y espera mi instrucción: **no cambies nada sin mi aprobación**. Cuando entregues archivos, adjúntalos, no incluyas claves y verifica desde el zip final descomprimido. Mantén el documento actualizado (§13).
+> Hola. Continúo el proyecto **AgroIA** (IA 26-2, CUL). Soy Víctor y hablo español de Colombia. Adjunto `AgroIA_CONTEXTO.md` (v1.9): es toda la memoria del proyecto. **Léelo completo antes de responder** y sigue sus **reglas de trabajo (§17)**. Primero resúmeme en 10 líneas dónde estamos y qué es lo más urgente, y espera mi instrucción: **no cambies nada sin mi aprobación**. Cuando entregues archivos, adjúntalos, no incluyas claves y verifica desde el zip final descomprimido. Mantén el documento actualizado (§13).
 
 3. **Primeras cosas que probablemente pida el usuario:** montar Sinric de nuevo, cambiar claves, subir los zips, ayudar a José con el firmware, aprobar «alertas», proteger la API, preparar la presentación.
 4. **Aviso para el asistente nuevo:** no tiene acceso a la API ni a Railway del usuario; trabaja con lo que el usuario pega o con capturas. Los scripts de prueba anteriores no existen (§16).
 
 ## 20. Registro de cambios (lo más reciente arriba)
+
+### v1.9 — 18 nov 2026 — Respaldo de la base de datos y pausa de recepción
+- **Pedido de Víctor (dos ideas):** (1) botón para exportar un respaldo de la base de datos protegido con una clave maestra; (2) forma de apagar el envío de datos a la base de datos hasta que se vuelva a encender. Aprobado con «Aprobado respaldo y pausa».
+- **Decisiones:** la clave vive solo en la variable `BACKUP_CLAVE` de Railway; la pausa se guarda en la base de datos (sobrevive a reinicios); pausar solo afecta a la base de datos, no a ThingSpeak ni al ESP32; lo recibido en pausa se descarta.
+- **Backend (zip):** nuevos `app/core/admin_clave.py`, `app/routes/admin_routes.py`, `app/services/respaldo_service.py`, `app/crud/ajuste_sistema_crud.py`, `app/models/ajuste_sistema_model.py`; modificados `main.py` (ruta `/admin`), `app/routes/muestra_suelo_routes.py` (revisa la pausa antes de guardar) y `.env.example` (nombre de la variable, sin valor). Detalle en §4.
+- **Frontend (zip):** nuevo `js/admin.js`; `pages/configuracion.html` gana la tarjeta de administración; `js/config.js` → página 10.3.
+- **Verificado:** 18/18 pruebas locales con SQLite (clave ausente/mala/buena, bloqueo por intentos, pausar/activar, 202 sin guardar, la pausa sobrevive al reinicio, activar vuelve a guardar, el .zip trae un CSV por tabla y la clave no está dentro) y prueba de punta a punta en Chrome sin interfaz (estado, clave mala, pausar, descarga del respaldo, reanudar; sin errores de JavaScript y sin guardar la clave en el navegador).
+- **NO se probó:** contra Neon/PostgreSQL ni en Railway (hay que probarlo tras subirlo), ni con el firmware real de José.
+- **Bot y Sinric:** sin cambios de código; solo este documento.
 
 ### v1.8 — 17 nov 2026 — Modelo de Machine Learning para el Corte 3
 - **Contexto:** el docente publicó la «Propuesta de aula» del Corte 3 (ver §5.1). Víctor indicó que lo de Julián y Kenny (Edge Impulse) y el poster ya están hechos; faltan el ML y el PowerPoint.

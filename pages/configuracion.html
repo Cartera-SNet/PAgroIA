@@ -40,6 +40,20 @@
       </div>
     </section>
     <section class="cfg-card">
+      <div class="cfg-cab">Administración (respaldo y pausa)</div>
+      <div class="cfg-cuerpo">
+        <div class="campo"><label for="adm-clave">Clave maestra</label><input class="inp" id="adm-clave" type="password" autocomplete="off" placeholder="Escribe la clave maestra"></div>
+        <div class="cfg-fila" style="margin-top:14px"><div class="estado-txt">Recepción de datos: <b id="adm-estado">Consultando…</b></div></div>
+        <div class="cfg-acciones">
+          <button class="btn-p" id="adm-respaldo" type="button">Descargar respaldo</button>
+          <button class="btn-s" id="adm-pausar" type="button">Pausar recepción</button>
+          <button class="btn-s" id="adm-reanudar" type="button">Reanudar recepción</button>
+        </div>
+        <p class="cfg-nota" id="adm-msg" role="status"></p>
+        <p class="cfg-nota">Pausada: el ESP32 sigue funcionando y enviando a ThingSpeak, pero la base de datos no guarda lo nuevo hasta que reanudes. El respaldo es un .zip con la información de todas las tablas, incluidos los datos de los usuarios: guárdalo en un lugar privado.</p>
+      </div>
+    </section>
+    <section class="cfg-card">
       <div class="cfg-cab">Información</div>
       <div class="cfg-cuerpo"><dl class="det-lista" id="info"></dl></div>
     </section>
@@ -54,5 +68,6 @@
 <script src="../js/ui.js"></script>
 <script src="../js/layout.js"></script>
 <script src="../js/configuracion.js"></script>
+<script src="../js/admin.js"></script>
 </body>
 </html>
