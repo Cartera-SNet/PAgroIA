@@ -2,7 +2,7 @@
 
 | | |
 |---|---|
-| **Versión del documento** | **v1.11** |
+| **Versión del documento** | **v1.12** |
 | **Última actualización** | 17 de noviembre de 2026 |
 | **Proyecto** | AgroIA — Diagnóstico de fertilidad del suelo |
 | **Asignatura** | Inteligencia Artificial 26-2 · CUL · Docente: Bryan Josser Fernández Ebrath |
@@ -31,7 +31,7 @@ Un **ESP32** con sensores mide **temperatura del aire, humedad del aire, humedad
 
 ```
                     ┌────────────────────────────┐
-   ESP32 (sensores) │  ThingSpeak  canal 3540815 │──► Frontend (tablero, historial, gráficos)
+   ESP32 (sensores) │  ThingSpeak  canal 3586784 │──► Frontend (tablero, historial, gráficos)
         │  ├───────►│  (público, 4 campos)       │──► Respaldo del bot y del puente Sinric
         │  │        └────────────────────────────┘
         │  └───────► API (FastAPI, Railway) ──► Neon (PostgreSQL)
@@ -58,22 +58,22 @@ Un quinto archivo suelto, `AgroIA_Diagnostico.html`, es la página de diagnósti
 | API | https://agroiabackend.up.railway.app |
 | Documentación de la API (Swagger) | https://agroiabackend.up.railway.app/docs |
 | Página web | https://agroia-suelo.up.railway.app (tablero: `/dashboard.html`) |
-| Canal ThingSpeak (público) | https://thingspeak.mathworks.com/channels/3540815 |
-| Channel ID | `3540815` |
+| Canal ThingSpeak (público) | https://thingspeak.mathworks.com/channels/3586784 |
+| Channel ID | `3586784` (desde el 18 nov 2026; el canal anterior era `3540815`) |
 
 **Render ya no se usa.** Toda la API está en Railway. Cualquier variable `API_URL` que aún apunte a `onrender.com` debe cambiarse (el bot y el puente la corrigen solos al arrancar, pero conviene dejarla bien).
 
 ## 3. Datos
 
-**ThingSpeak** (canal 3540815): campo 1 = temperatura del aire (°C) · campo 2 = humedad del aire (%) · campo 3 = humedad del suelo (%) · campo 4 = **TDS (ppm)**. *(El pH ya no se mide.)* Enviar cada **≥ 20 s** (la cuenta gratis exige ≥ 15 s). La *Write API Key* se entrega **solo por privado** a José, nunca al grupo.
+**ThingSpeak** (canal **3586784**, desde el 18 nov 2026): campo 1 = **humedad del suelo (%)** · campo 2 = **temperatura del aire (°C)** · campo 3 = **humedad del aire (%)** · campo 4 = **TDS (ppm)**. *(Antes, en el canal 3540815, el orden era 1 temperatura, 2 humedad del aire, 3 humedad del suelo; lo cambió José al crear el canal nuevo. El orden está en `js/config.js` → `campos`, en `campo_ts` del bot y de Sinric, y en `thingspeakKey/field1..4` del firmware: los cuatro deben coincidir.)* *(El pH ya no se mide.)* Enviar cada **≥ 20 s** (la cuenta gratis exige ≥ 15 s). La *Write API Key* se entrega **solo por privado** a José, nunca al grupo.
 
 **Modelo de datos y nombres oficiales (v1.4).** Cada muestra que el ESP32 envía a la API (`POST /muestras/create`) lleva `Sensor_Id` (qué sensor físico), `Parametro_Id` (qué se midió) y `Muestra_Valor`. El **tipo de sensor** (`TipoSensor_Id`) **no se manda**: cuelga del sensor. La página, el bot, Sinric y el menú del LCD reconocen cada variable por el **nombre del parámetro**, no por un id.
 
 | Variable | Parámetro (`parametros_medidos`) | Tipo de sensor (`tipos_sensor`) | Campo ThingSpeak | Letra LCD |
 |---|---|---|---|---|
-| Temperatura | Temperatura del aire (°C) | Temperatura del aire *(hoy en la base: «Temperatura», id 2)* | 1 | T |
-| Humedad del aire | Humedad del aire (%) | Humedad del aire *(hoy: «Humedad ambiental», id 3)* | 2 | A |
-| Humedad del suelo | Humedad del suelo (%) | Humedad del suelo *(id 1)* | 3 | S |
+| Temperatura | Temperatura del aire (°C) | Temperatura del aire *(hoy en la base: «Temperatura», id 2)* | 2 | T |
+| Humedad del aire | Humedad del aire (%) | Humedad del aire *(hoy: «Humedad ambiental», id 3)* | 3 | A |
+| Humedad del suelo | Humedad del suelo (%) | Humedad del suelo *(id 1)* | 1 | S |
 | TDS | TDS (ppm) | TDS *(id 5)* | 4 | D |
 | pH | *(retirado: se ignora)* | pH *(id 4, retirado)* | — | — |
 
@@ -369,8 +369,8 @@ Cada **60 s** lee los datos **filtrados por variable** y los envía a dispositiv
 
 | Pieza | Versión / estado | Runtime | Dependencias principales |
 |---|---|---|---|
-| Documento | v1.11 | — | — |
-| Frontend | build v1.11 (página 10.5: administración, Alertas con ThingSpeak y TDS desde la base de datos) | HTML/CSS/JS sin librerías; `serve.py` (Python 3) | `requirements.txt` vacío a propósito |
+| Documento | v1.12 | — | — |
+| Frontend | build v1.12 (página 10.6: canal nuevo 3586784 y nuevo orden de campos) | HTML/CSS/JS sin librerías; `serve.py` (Python 3) | `requirements.txt` vacío a propósito |
 | Backend | código del equipo (`bbf1923`) + 3 archivos (v1.6) | `python:3.12-slim` (Dockerfile) | `fastapi==0.115.12`, `uvicorn==0.34.2`, `starlette==0.46.2`, `SQLAlchemy==2.0.40`, `psycopg2-binary==2.9.12`, `pydantic==2.11.3`, `python-jose==3.5.0`, `python-multipart==0.0.32`, `python-dotenv==1.1.0`, `google-auth==2.59.0`, `httpx==0.28.1`, `requests==2.34.2`, `numpy==2.5.3`, `pillow==12.3.0`, `opencv-python-headless==4.10.0.84`, `reportlab==5.0.1`, `torch==2.14.0`, `torchvision==0.29.0`, `ultralytics==8.4.163`, `ultralytics-platform==0.1.65`, `ultralytics-thop==2.1.6` (70 líneas en total) |
 | Bot de Telegram | v2 (+corrector, LED, TDS, reintentos) | Railpack de Railway (la versión de Python del bot: *por confirmar*) | `python-telegram-bot[webhooks]`, `requests`, `python-dotenv`, `groq` (sin versión fijada) |
 | Puente Sinric | v2 (+`USAR_API=0`) | Railpack 0.43.0, Python 3.13.16 | `requests`, `sinricpro` |
@@ -430,7 +430,7 @@ Invoke-RestMethod https://agroiabackend.up.railway.app/menu/ultimo-registro
 Invoke-RestMethod -Method Post -Uri https://agroiabackend.up.railway.app/esp32/comando -ContentType "application/json" -Body '{"accion":"encender_led"}'
 Invoke-RestMethod https://agroiabackend.up.railway.app/esp32/comando         # el ESP32 la recoge y se limpia
 ```
-- Lo que llega a ThingSpeak: `https://api.thingspeak.com/channels/3540815/feeds.json?results=3` (mirar `created_at` y `field4`).
+- Lo que llega a ThingSpeak: `https://api.thingspeak.com/channels/3586784/feeds.json?results=3` (mirar `created_at` y `field4`).
 - Envío de prueba al campo 4 desde el navegador (con la Write API Key **solo en el navegador**, nunca en archivos): `https://api.thingspeak.com/update?api_key=<CLAVE>&field4=450`.
 - `AgroIA_Diagnostico.html` (doble clic): revisa ThingSpeak y la API y da el cuerpo exacto de cada arreglo en Swagger.
 
@@ -510,12 +510,20 @@ npm i puppeteer-core @sparticuz/chromium     # navegador sin pantalla para proba
 1. **Sube a la conversación nueva:** este archivo (`AgroIA_CONTEXTO.md`) y, si va a tocar código, los zips que correspondan (`AgroIABackend_completo_sleep.zip`, `AgroIA_frontend_web.zip`, `AgroIA_bot_telegram.zip`, `AGROIA-ASISTENTE_sinric_sin_API.zip`). Las capturas de Railway o ThingSpeak ayudan mucho.
 2. **Pega este prompt:**
 
-> Hola. Continúo el proyecto **AgroIA** (IA 26-2, CUL). Soy Víctor y hablo español de Colombia. Adjunto `AgroIA_CONTEXTO.md` (v1.11): es toda la memoria del proyecto. **Léelo completo antes de responder** y sigue sus **reglas de trabajo (§17)**. Primero resúmeme en 10 líneas dónde estamos y qué es lo más urgente, y espera mi instrucción: **no cambies nada sin mi aprobación**. Cuando entregues archivos, adjúntalos, no incluyas claves y verifica desde el zip final descomprimido. Mantén el documento actualizado (§13).
+> Hola. Continúo el proyecto **AgroIA** (IA 26-2, CUL). Soy Víctor y hablo español de Colombia. Adjunto `AgroIA_CONTEXTO.md` (v1.12): es toda la memoria del proyecto. **Léelo completo antes de responder** y sigue sus **reglas de trabajo (§17)**. Primero resúmeme en 10 líneas dónde estamos y qué es lo más urgente, y espera mi instrucción: **no cambies nada sin mi aprobación**. Cuando entregues archivos, adjúntalos, no incluyas claves y verifica desde el zip final descomprimido. Mantén el documento actualizado (§13).
 
 3. **Primeras cosas que probablemente pida el usuario:** montar Sinric de nuevo, cambiar claves, subir los zips, ayudar a José con el firmware, aprobar «alertas», proteger la API, preparar la presentación.
 4. **Aviso para el asistente nuevo:** no tiene acceso a la API ni a Railway del usuario; trabaja con lo que el usuario pega o con capturas. Los scripts de prueba anteriores no existen (§16).
 
 ## 20. Registro de cambios (lo más reciente arriba)
+
+### v1.12 — 18 nov 2026 — Canal de ThingSpeak nuevo (3586784) y nuevo orden de campos
+- **Cambio:** José creó un canal nuevo (**3586784**), con otra Write API Key (la clave del canal anterior, que se había expuesto, ya no sirve para este). Decisión de Víctor: usar **el orden de José**: campo 1 humedad del suelo, 2 temperatura, 3 humedad del aire, 4 TDS.
+- **Frontend (zip, página 10.6):** `js/config.js` (`channelId`, `campos`), `dashboard.html` (etiquetas «Campo N»), `diagnostico.html` (canal y campos), `js/configuracion.js` (ejemplo).
+- **Bot y Sinric (zips):** `datos_agroia.py` (`THINGSPEAK_CANAL` por defecto y `campo_ts`); bot: enlace del canal en `conocimiento.py`. **En Railway, la variable `THINGSPEAK_CANAL` de ambos servicios, si existe, hay que cambiarla a 3586784** (la variable manda sobre el valor del código).
+- **Firmware (archivo aparte, `AgroIA_ESP32_con_ThingSpeak.ino`):** envía field1 = humedad del suelo, field2 = temperatura, field3 = humedad del aire, field4 = TDS. La Write API Key del canal nuevo se pega a mano (el archivo trae un marcador); nunca va en archivos compartidos.
+- **Probado:** página en Chrome sin interfaz con datos simulados en el orden nuevo (tarjetas, etiquetas y gráficos correctos, sin errores de JavaScript); bot y Sinric con una respuesta simulada (cada valor en su variable). **No probado:** en el sitio real, ni el firmware en un ESP32 con el canal nuevo.
+- **Pendiente:** el canal nuevo debe ser **público** (si no, las gráficas del tablero no cargan); renombrar los campos y los títulos de las gráficas en ThingSpeak según el orden nuevo; que el ESP32 envíe con la clave nueva.
 
 ### v1.11 — 18 nov 2026 — TDS del tablero desde la base de datos
 - **Problema:** el TDS llega a la base de datos (Sensor_Id 5) pero no a ThingSpeak `field4`; el tablero solo leía ThingSpeak. Nada de lo que hay en el backend, la web, el bot o Sinric escribe en ThingSpeak (solo leen); quien lo alimenta (campos 1–3) es algo externo: otra versión del firmware o el backend viejo de Render. **Pendiente de averiguar con José.** El código de José que se revisó (MQTT + `POST /muestras/create` a Render) no tiene ThingSpeak.

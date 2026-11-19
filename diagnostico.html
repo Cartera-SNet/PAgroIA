@@ -36,7 +36,7 @@
   <div class="card">
     <div class="fila">
       <label>Dirección de la API<input id="api" value="https://agroiabackend.up.railway.app"></label>
-      <label>Canal de ThingSpeak<input id="canal" value="3540815"></label>
+      <label>Canal de ThingSpeak<input id="canal" value="3586784"></label>
       <button id="ir">Revisar ahora</button>
     </div>
   </div>
@@ -56,9 +56,9 @@ const TZ = "America/Bogota";
 
 /* Nombres recomendados: así los reconocen la página, el bot, el menú del LCD y Sinric */
 const REC = {
-  temp:     { etq: "Temperatura del aire", param: "Temperatura del aire", unidad: "°C",  tipo: "Temperatura del aire", tipoDesc: "Sensor para medir la temperatura del aire (°C)", campo: 1, letra: "T" },
-  humAire:  { etq: "Humedad del aire",     param: "Humedad del aire",     unidad: "%",   tipo: "Humedad del aire",     tipoDesc: "Sensor para medir la humedad relativa del aire (%)", campo: 2, letra: "A" },
-  humSuelo: { etq: "Humedad del suelo",    param: "Humedad del suelo",    unidad: "%",   tipo: "Humedad del suelo",    tipoDesc: "Sensor para medir el porcentaje de humedad presente en el suelo", campo: 3, letra: "S" },
+  temp:     { etq: "Temperatura del aire", param: "Temperatura del aire", unidad: "°C",  tipo: "Temperatura del aire", tipoDesc: "Sensor para medir la temperatura del aire (°C)", campo: 2, letra: "T" },
+  humAire:  { etq: "Humedad del aire",     param: "Humedad del aire",     unidad: "%",   tipo: "Humedad del aire",     tipoDesc: "Sensor para medir la humedad relativa del aire (%)", campo: 3, letra: "A" },
+  humSuelo: { etq: "Humedad del suelo",    param: "Humedad del suelo",    unidad: "%",   tipo: "Humedad del suelo",    tipoDesc: "Sensor para medir el porcentaje de humedad presente en el suelo", campo: 1, letra: "S" },
   tds:      { etq: "TDS",                  param: "TDS",                  unidad: "ppm", tipo: "TDS",                  tipoDesc: "Sensor para medir sólidos disueltos totales (ppm)", campo: 4, letra: "D" }
 };
 const OBLIG = ["temp", "humAire", "humSuelo", "tds"];

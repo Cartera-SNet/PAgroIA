@@ -27,7 +27,7 @@ montarLayout({ nuevo: true, estadoPropio: true });
   function abrirConfigTS() {
     const c = tsCfg();
     const m = abrirModal("Conexión a ThingSpeak",
-      '<div class="campo"><label for="m-canal">Channel ID</label><input class="inp" id="m-canal" inputmode="numeric" value="' + esc(c.channelId) + '" placeholder="Ej.: 3540815"></div>' +
+      '<div class="campo"><label for="m-canal">Channel ID</label><input class="inp" id="m-canal" inputmode="numeric" value="' + esc(c.channelId) + '" placeholder="Ej.: 3586784"></div>' +
       '<p class="cfg-nota" id="m-res">El canal debe estar compartido como público. Nunca escribas aquí la Write API Key.</p>',
       [{ t: "Probar", sec: true, f: async () => {
           const id = $("m-canal").value.trim(), r = $("m-res"); if (!/^\d+$/.test(id)) { r.className = "cfg-nota mal-txt"; r.textContent = "El Channel ID es un número."; return; }

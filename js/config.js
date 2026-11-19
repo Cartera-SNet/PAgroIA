@@ -1,5 +1,5 @@
 // Configuración central de la página.
-const VERSION_PAGINA = "10.5";
+const VERSION_PAGINA = "10.6";
 // Dirección de la API:
 //  - abriendo la página en este computador (localhost / archivo local) -> backend local
 //  - publicada (Railway u otro hosting) -> API desplegada.
@@ -25,10 +25,10 @@ const RANGOS = {
 const THINGSPEAK = {
   // Número del canal (no es secreto; el canal debe estar compartido como público).
   // NO escribir aquí la Write API Key.
-  channelId: "3540815",
+  channelId: "3586784",
 
   // Qué campo del canal es cada medición
-  campos: { temp: 1, humAire: 2, humSuelo: 3, tds: 4 },      // el campo 4 es TDS (ppm); el pH ya no se mide
+  campos: { temp: 2, humAire: 3, humSuelo: 1, tds: 4 },      // orden del canal 3586784: 1 humedad del suelo, 2 temperatura, 3 humedad del aire, 4 TDS (ppm); el pH ya no se mide
   // URLs completas de los gráficos (botón "insertar/embed" de cada gráfico en ThingSpeak).
   // Si se dejan vacías, la página arma la dirección oficial del gráfico con los colores del diseño.
   graficos: { temp: "", humaire: "", humsuelo: "", tds: "" },
